@@ -4,9 +4,17 @@ interface GreeksPanelProps {
     theta: number;
     vega: number;
     netDelta?: number;
+    heartbeatStatus?: 'live' | 'stale' | 'disconnected';
 }
 
-export default function GreeksPanel({ delta, gamma, theta, vega, netDelta }: GreeksPanelProps) {
+export default function GreeksPanel({
+    delta,
+    gamma,
+    theta,
+    vega,
+    netDelta,
+    heartbeatStatus = 'live'
+}: GreeksPanelProps) {
     const getDeltaWarning = () => {
         if (netDelta === undefined) return null;
         const absDelta = Math.abs(netDelta);
@@ -21,11 +29,28 @@ export default function GreeksPanel({ delta, gamma, theta, vega, netDelta }: Gre
 
     const warning = getDeltaWarning();
 
+    const getHeartbeatIndicator = () => {
+        switch (heartbeatStatus) {
+            case 'live':
+                return <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-2" title="Live data" />;
+            case 'stale':
+                return <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-2" title="Stale data" />;
+            case 'disconnected':
+                return <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-2" title="Disconnected" />;
+        }
+    };
+
     return (
         <div className="bg-[#1a1f2e] rounded-xl p-4">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                📐 Position Greeks
-            </h3>
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    📐 Position Greeks
+                </h3>
+                <div className="flex items-center text-sm text-gray-400">
+                    {getHeartbeatIndicator()}
+                    {heartbeatStatus === 'live' ? 'Live' : heartbeatStatus === 'stale' ? 'Updating...' : 'Disconnected'}
+                </div>
+            </div>
 
             {/* Warning Banner */}
             {warning && (
@@ -44,6 +69,7 @@ export default function GreeksPanel({ delta, gamma, theta, vega, netDelta }: Gre
                     <div className={`text-2xl font-bold ${delta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {delta >= 0 ? '+' : ''}{delta.toFixed(2)}
                     </div>
+                    <div className="text-xs text-gray-500 mt-1">per $1 move</div>
                 </div>
 
                 {/* Gamma */}
@@ -52,6 +78,7 @@ export default function GreeksPanel({ delta, gamma, theta, vega, netDelta }: Gre
                     <div className="text-2xl font-bold text-blue-400">
                         {gamma.toFixed(4)}
                     </div>
+                    <div className="text-xs text-gray-500 mt-1">delta change</div>
                 </div>
 
                 {/* Theta */}
@@ -60,6 +87,7 @@ export default function GreeksPanel({ delta, gamma, theta, vega, netDelta }: Gre
                     <div className={`text-2xl font-bold ${theta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         ${theta.toFixed(2)}/day
                     </div>
+                    <div className="text-xs text-gray-500 mt-1">time decay</div>
                 </div>
 
                 {/* Vega */}
@@ -68,6 +96,7 @@ export default function GreeksPanel({ delta, gamma, theta, vega, netDelta }: Gre
                     <div className="text-2xl font-bold text-purple-400">
                         ${vega.toFixed(2)}
                     </div>
+                    <div className="text-xs text-gray-500 mt-1">per 1% IV</div>
                 </div>
             </div>
         </div>

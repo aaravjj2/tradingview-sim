@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import { createChart } from 'lightweight-charts';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
 
 interface CandleChartProps {
     ticker: string;
     data: CandleData[];
     breakevens?: number[];
     onHover?: (price: number, timestamp: string) => void;
+    hoveredTimestamp?: string;
 }
 
 interface CandleData {
@@ -17,104 +18,138 @@ interface CandleData {
     volume: number;
 }
 
-export default function CandleChart({ ticker, data, breakevens = [], onHover }: CandleChartProps) {
+export default function CandleChart({
+    ticker,
+    data,
+    breakevens = [],
+    onHover,
+    hoveredTimestamp
+}: CandleChartProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
+    const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
+    const seriesRef = useRef<any>(null);
     const [currentPrice, setCurrentPrice] = useState<number>(0);
-    const [chartError, setChartError] = useState<string | null>(null);
 
+    // Initialize chart
     useEffect(() => {
         if (!chartContainerRef.current) return;
 
-        try {
-            // Create chart
-            const chart = createChart(chartContainerRef.current, {
-                layout: {
-                    background: { color: '#0f1117' },
-                    textColor: 'rgba(255, 255, 255, 0.7)',
+        const chart = createChart(chartContainerRef.current, {
+            layout: {
+                background: { color: '#0f1117' },
+                textColor: 'rgba(255, 255, 255, 0.7)',
+            },
+            grid: {
+                vertLines: { color: 'rgba(255, 255, 255, 0.05)' },
+                horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
+            },
+            crosshair: {
+                mode: 1,
+                vertLine: {
+                    color: 'rgba(255, 255, 255, 0.3)',
+                    width: 1,
+                    style: 2,
+                    labelBackgroundColor: '#1a1f2e',
                 },
-                grid: {
-                    vertLines: { color: 'rgba(255, 255, 255, 0.05)' },
-                    horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
+                horzLine: {
+                    color: 'rgba(255, 255, 255, 0.3)',
+                    width: 1,
+                    style: 2,
+                    labelBackgroundColor: '#1a1f2e',
                 },
-                width: chartContainerRef.current.clientWidth,
-                height: 350,
-            });
+            },
+            rightPriceScale: {
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+            },
+            timeScale: {
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                timeVisible: true,
+                secondsVisible: false,
+            },
+            width: chartContainerRef.current.clientWidth,
+            height: 350,
+        });
 
-            // Try to add candlestick series with v5 API
-            let candleSeries: any;
-            try {
-                // v5+ API
-                candleSeries = chart.addCandlestickSeries({
-                    upColor: '#00C853',
-                    downColor: '#FF1744',
-                    borderUpColor: '#00C853',
-                    borderDownColor: '#FF1744',
-                    wickUpColor: '#00C853',
-                    wickDownColor: '#FF1744',
-                });
-            } catch {
-                // Fallback - just use line series if candlestick fails
-                candleSeries = chart.addLineSeries({
-                    color: '#00BCD4',
-                    lineWidth: 2,
-                });
-            }
+        chartRef.current = chart;
 
-            // Set data if available
-            if (data.length > 0) {
-                const chartData = data.map(d => ({
-                    time: d.timestamp.split('T')[0],
-                    open: d.open,
-                    high: d.high,
-                    low: d.low,
-                    close: d.close,
-                }));
+        // Add candlestick series using v5 API
+        const candleSeries = chart.addSeries(CandlestickSeries, {
+            upColor: '#00C853',
+            downColor: '#FF1744',
+            borderUpColor: '#00C853',
+            borderDownColor: '#FF1744',
+            wickUpColor: '#00C853',
+            wickDownColor: '#FF1744',
+        });
 
-                try {
-                    candleSeries.setData(chartData);
-                } catch {
-                    // If candlestick data fails, try line data
-                    const lineData = data.map(d => ({
-                        time: d.timestamp.split('T')[0],
-                        value: d.close,
-                    }));
-                    candleSeries.setData(lineData);
+        seriesRef.current = candleSeries;
+
+        // Handle crosshair move for sync
+        chart.subscribeCrosshairMove((param) => {
+            if (param.point && param.time && onHover) {
+                const data = param.seriesData.get(candleSeries);
+                if (data && 'close' in data) {
+                    onHover((data as any).close, param.time as string);
                 }
-
-                setCurrentPrice(data[data.length - 1].close);
-                chart.timeScale().fitContent();
             }
+        });
 
-            // Handle resize
-            const handleResize = () => {
-                if (chartContainerRef.current) {
-                    chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-                }
-            };
+        // Handle resize
+        const handleResize = () => {
+            if (chartContainerRef.current) {
+                chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+            }
+        };
 
-            window.addEventListener('resize', handleResize);
+        window.addEventListener('resize', handleResize);
 
-            return () => {
-                window.removeEventListener('resize', handleResize);
-                chart.remove();
-            };
-        } catch (err: any) {
-            setChartError(err.message || 'Failed to create chart');
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            chart.remove();
+        };
+    }, [onHover]);
+
+    // Update data
+    useEffect(() => {
+        if (!seriesRef.current || data.length === 0) return;
+
+        const chartData = data.map(d => ({
+            time: d.timestamp.split('T')[0] as string,
+            open: d.open,
+            high: d.high,
+            low: d.low,
+            close: d.close,
+        }));
+
+        seriesRef.current.setData(chartData);
+
+        if (data.length > 0) {
+            setCurrentPrice(data[data.length - 1].close);
         }
+
+        chartRef.current?.timeScale().fitContent();
     }, [data]);
 
-    if (chartError) {
-        return (
-            <div className="bg-[#1a1f2e] rounded-xl p-4 h-full">
-                <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-lg font-semibold text-white">📊 {ticker} Price Chart</h3>
-                </div>
-                <div className="flex items-center justify-center h-[350px] text-red-400">
-                    Chart Error: {chartError}
-                </div>
-            </div>
-        );
-    }
+    // Add breakeven lines
+    useEffect(() => {
+        if (!seriesRef.current || !chartRef.current) return;
+
+        // Create price lines for breakevens
+        breakevens.forEach((be, index) => {
+            try {
+                seriesRef.current.createPriceLine({
+                    price: be,
+                    color: '#FF9800',
+                    lineWidth: 1,
+                    lineStyle: 2,
+                    axisLabelVisible: true,
+                    title: `BE ${index + 1}`,
+                });
+            } catch (err) {
+                console.warn('Could not create price line:', err);
+            }
+        });
+    }, [breakevens, data]);
 
     return (
         <div className="bg-[#1a1f2e] rounded-xl p-4 h-full">
