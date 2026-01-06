@@ -516,3 +516,360 @@ def build_strategy_legs(strategy_template: List[Dict], current_price: float,
         legs.append(leg)
     
     return legs
+
+
+# =============================================================================
+# Technical Indicators
+# =============================================================================
+
+def calculate_sma(prices: List[float], period: int) -> List[float]:
+    """
+    Calculate Simple Moving Average
+    
+    Args:
+        prices: List of closing prices
+        period: Number of periods for SMA
+        
+    Returns:
+        List of SMA values (NaN for first period-1 values)
+    """
+    if len(prices) < period:
+        return [np.nan] * len(prices)
+    
+    sma = []
+    for i in range(len(prices)):
+        if i < period - 1:
+            sma.append(np.nan)
+        else:
+            sma.append(np.mean(prices[i - period + 1:i + 1]))
+    
+    return sma
+
+
+def calculate_ema(prices: List[float], period: int) -> List[float]:
+    """
+    Calculate Exponential Moving Average
+    
+    Args:
+        prices: List of closing prices
+        period: Number of periods for EMA
+        
+    Returns:
+        List of EMA values
+    """
+    if len(prices) < period:
+        return [np.nan] * len(prices)
+    
+    multiplier = 2 / (period + 1)
+    ema = [np.nan] * (period - 1)
+    
+    # First EMA is SMA
+    ema.append(np.mean(prices[:period]))
+    
+    # Calculate subsequent EMAs
+    for i in range(period, len(prices)):
+        ema.append((prices[i] - ema[-1]) * multiplier + ema[-1])
+    
+    return ema
+
+
+def calculate_rsi(prices: List[float], period: int = 14) -> List[float]:
+    """
+    Calculate Relative Strength Index
+    
+    Args:
+        prices: List of closing prices
+        period: RSI period (typically 14)
+        
+    Returns:
+        List of RSI values (0-100)
+    """
+    if len(prices) < period + 1:
+        return [np.nan] * len(prices)
+    
+    # Calculate price changes
+    deltas = [prices[i] - prices[i - 1] for i in range(1, len(prices))]
+    
+    gains = [d if d > 0 else 0 for d in deltas]
+    losses = [-d if d < 0 else 0 for d in deltas]
+    
+    rsi = [np.nan] * period
+    
+    # First average
+    avg_gain = np.mean(gains[:period])
+    avg_loss = np.mean(losses[:period])
+    
+    for i in range(period, len(deltas)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+        
+        if avg_loss == 0:
+            rsi.append(100)
+        else:
+            rs = avg_gain / avg_loss
+            rsi.append(100 - (100 / (1 + rs)))
+    
+    # Pad to match original length
+    rsi = [np.nan] + rsi
+    
+    return rsi
+
+
+def calculate_bollinger_bands(prices: List[float], period: int = 20, 
+                               std_dev: float = 2.0) -> Tuple[List[float], List[float], List[float]]:
+    """
+    Calculate Bollinger Bands
+    
+    Args:
+        prices: List of closing prices
+        period: SMA period (typically 20)
+        std_dev: Number of standard deviations
+        
+    Returns:
+        Tuple of (upper_band, middle_band, lower_band)
+    """
+    middle = calculate_sma(prices, period)
+    
+    upper = []
+    lower = []
+    
+    for i in range(len(prices)):
+        if i < period - 1:
+            upper.append(np.nan)
+            lower.append(np.nan)
+        else:
+            std = np.std(prices[i - period + 1:i + 1])
+            upper.append(middle[i] + std_dev * std)
+            lower.append(middle[i] - std_dev * std)
+    
+    return upper, middle, lower
+
+
+def calculate_macd(prices: List[float], fast: int = 12, slow: int = 26, 
+                   signal: int = 9) -> Tuple[List[float], List[float], List[float]]:
+    """
+    Calculate MACD (Moving Average Convergence Divergence)
+    
+    Args:
+        prices: List of closing prices
+        fast: Fast EMA period
+        slow: Slow EMA period
+        signal: Signal line period
+        
+    Returns:
+        Tuple of (macd_line, signal_line, histogram)
+    """
+    ema_fast = calculate_ema(prices, fast)
+    ema_slow = calculate_ema(prices, slow)
+    
+    # MACD line
+    macd_line = [f - s if not (np.isnan(f) or np.isnan(s)) else np.nan 
+                 for f, s in zip(ema_fast, ema_slow)]
+    
+    # Signal line (EMA of MACD)
+    valid_macd = [m for m in macd_line if not np.isnan(m)]
+    signal_ema = calculate_ema(valid_macd, signal) if len(valid_macd) >= signal else []
+    
+    # Pad signal line
+    nan_count = len(macd_line) - len(signal_ema)
+    signal_line = [np.nan] * nan_count + signal_ema
+    
+    # Histogram
+    histogram = [m - s if not (np.isnan(m) or np.isnan(s)) else np.nan 
+                 for m, s in zip(macd_line, signal_line)]
+    
+    return macd_line, signal_line, histogram
+
+
+# =============================================================================
+# IV Surface Calculations
+# =============================================================================
+
+def calculate_iv_surface(options_data: List[Dict], current_price: float,
+                        risk_free_rate: float = DEFAULT_RISK_FREE_RATE) -> Dict:
+    """
+    Calculate IV surface data for 3D/heatmap visualization
+    
+    Args:
+        options_data: List of option dicts with 'strike', 'expiration', 'iv', 'type'
+        current_price: Current stock price
+        risk_free_rate: Risk-free rate
+        
+    Returns:
+        Dict with 'strikes', 'expirations', 'ivs' (2D array)
+    """
+    if not options_data:
+        return {"strikes": [], "expirations": [], "ivs": []}
+    
+    # Extract unique strikes and expirations
+    strikes = sorted(set(opt.get("strike", 0) for opt in options_data))
+    expirations = sorted(set(opt.get("expiration", "") for opt in options_data))
+    
+    # Build IV matrix
+    iv_matrix = np.full((len(expirations), len(strikes)), np.nan)
+    
+    for opt in options_data:
+        strike = opt.get("strike", 0)
+        exp = opt.get("expiration", "")
+        iv = opt.get("iv", 0)
+        
+        if strike in strikes and exp in expirations and iv > 0:
+            strike_idx = strikes.index(strike)
+            exp_idx = expirations.index(exp)
+            iv_matrix[exp_idx, strike_idx] = iv * 100  # Convert to percentage
+    
+    return {
+        "strikes": strikes,
+        "expirations": expirations,
+        "ivs": iv_matrix.tolist(),
+        "current_price": current_price
+    }
+
+
+def calculate_iv_smile(options_data: List[Dict], expiration: str, 
+                       current_price: float) -> Tuple[List[float], List[float]]:
+    """
+    Calculate IV smile for a specific expiration
+    
+    Args:
+        options_data: List of option dicts
+        expiration: Target expiration date
+        current_price: Current stock price
+        
+    Returns:
+        Tuple of (strikes, ivs) where strikes are expressed as % moneyness
+    """
+    filtered = [opt for opt in options_data 
+                if opt.get("expiration") == expiration and opt.get("iv", 0) > 0]
+    
+    if not filtered:
+        return [], []
+    
+    # Sort by strike
+    filtered.sort(key=lambda x: x.get("strike", 0))
+    
+    strikes = []
+    ivs = []
+    
+    for opt in filtered:
+        strike = opt.get("strike", 0)
+        iv = opt.get("iv", 0)
+        
+        # Express as moneyness (% from ATM)
+        moneyness = ((strike / current_price) - 1) * 100
+        strikes.append(moneyness)
+        ivs.append(iv * 100)  # Convert to percentage
+    
+    return strikes, ivs
+
+
+def calculate_term_structure(options_data: List[Dict], strike: float = None,
+                             current_price: float = None) -> Tuple[List[int], List[float]]:
+    """
+    Calculate IV term structure (IV vs. time to expiration)
+    
+    Args:
+        options_data: List of option dicts
+        strike: Target strike (uses ATM if None)
+        current_price: Current price for ATM strike selection
+        
+    Returns:
+        Tuple of (days_to_expiration, ivs)
+    """
+    from datetime import datetime
+    
+    if strike is None and current_price:
+        # Use ATM options
+        atm_options = [opt for opt in options_data 
+                       if abs(opt.get("strike", 0) - current_price) / current_price < 0.02]
+    else:
+        atm_options = [opt for opt in options_data 
+                       if abs(opt.get("strike", 0) - (strike or 0)) < 0.01]
+    
+    if not atm_options:
+        return [], []
+    
+    # Calculate DTE for each option
+    today = datetime.now()
+    term_data = []
+    
+    for opt in atm_options:
+        exp_str = opt.get("expiration", "")
+        iv = opt.get("iv", 0)
+        
+        if iv <= 0:
+            continue
+            
+        try:
+            exp_date = datetime.strptime(exp_str, "%Y-%m-%d")
+            dte = (exp_date - today).days
+            if dte > 0:
+                term_data.append((dte, iv * 100))
+        except:
+            continue
+    
+    # Sort by DTE
+    term_data.sort(key=lambda x: x[0])
+    
+    dtes = [t[0] for t in term_data]
+    ivs = [t[1] for t in term_data]
+    
+    return dtes, ivs
+
+
+# =============================================================================
+# Dynamic Crosshair Calculations
+# =============================================================================
+
+def calculate_pnl_at_price(legs: List[OptionLeg], target_price: float,
+                           days_remaining: float, iv_adjustment: float = 0.0,
+                           r: float = DEFAULT_RISK_FREE_RATE) -> Dict[str, float]:
+    """
+    Calculate detailed P/L and Greeks at a specific price point
+    
+    Args:
+        legs: List of OptionLeg objects
+        target_price: Stock price to calculate at
+        days_remaining: Days until expiration
+        iv_adjustment: IV adjustment
+        r: Risk-free rate
+        
+    Returns:
+        Dict with P/L, Greeks, and other metrics at that price
+    """
+    # Calculate P/L at expiration
+    price_array = np.array([target_price])
+    expiry_pnl = calculate_expiration_payoff(legs, price_array)[0]
+    
+    # Calculate theoretical P/L now
+    current_pnl = calculate_theoretical_payoff(
+        legs, price_array, days_remaining, iv_adjustment, r
+    )[0]
+    
+    # Calculate Greeks at this price
+    greeks = {"delta": 0.0, "gamma": 0.0, "theta": 0.0, "vega": 0.0}
+    
+    for leg in legs:
+        if leg.option_type == "stock":
+            greeks["delta"] += leg.quantity * leg.sign
+        else:
+            adjusted_iv = max(0.01, leg.iv + iv_adjustment)
+            leg_greeks = calculate_greeks(
+                target_price, leg.strike, days_remaining,
+                r, adjusted_iv, leg.option_type
+            )
+            
+            multiplier = 100 * leg.quantity * leg.sign
+            for key in greeks:
+                greeks[key] += leg_greeks[key] * multiplier
+    
+    return {
+        "price": target_price,
+        "theoretical_pnl": current_pnl,
+        "expiry_pnl": expiry_pnl,
+        "time_value": current_pnl - expiry_pnl if days_remaining > 0 else 0,
+        "delta": greeks["delta"],
+        "gamma": greeks["gamma"],
+        "theta": greeks["theta"],
+        "vega": greeks["vega"]
+    }

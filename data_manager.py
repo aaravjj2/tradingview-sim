@@ -269,3 +269,140 @@ def get_options_chain(ticker: str, expiration: Optional[str] = None) -> Dict:
 def get_available_expirations(ticker: str) -> List[str]:
     """Convenience function to get available expirations"""
     return data_manager.get_available_expirations(ticker)
+
+
+def get_historical_bars(ticker: str, timeframe: str = "1Day", 
+                        limit: int = 100) -> List[Dict]:
+    """
+    Fetch historical OHLCV bars from Alpaca
+    
+    Args:
+        ticker: Stock symbol
+        timeframe: Bar timeframe (1Min, 5Min, 15Min, 1Hour, 1Day)
+        limit: Number of bars to fetch
+        
+    Returns:
+        List of bar dictionaries with OHLCV data
+    """
+    try:
+        from datetime import datetime, timedelta
+        
+        end = datetime.now()
+        
+        # Calculate start based on timeframe and limit
+        if timeframe == "1Day":
+            start = end - timedelta(days=limit * 2)  # Account for weekends
+        elif timeframe == "1Hour":
+            start = end - timedelta(hours=limit * 2)
+        else:
+            start = end - timedelta(minutes=limit * 5)
+        
+        url = f"{data_manager.data_url}/v2/stocks/{ticker}/bars"
+        params = {
+            "timeframe": timeframe,
+            "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "end": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "limit": limit,
+            "feed": "iex"
+        }
+        
+        response = requests.get(url, headers=data_manager.headers, params=params)
+        
+        if response.status_code == 200:
+            data = response.json()
+            bars = []
+            
+            for bar in data.get("bars", []):
+                bars.append({
+                    "timestamp": bar.get("t", ""),
+                    "open": bar.get("o", 0),
+                    "high": bar.get("h", 0),
+                    "low": bar.get("l", 0),
+                    "close": bar.get("c", 0),
+                    "volume": bar.get("v", 0)
+                })
+            
+            return bars
+        else:
+            print(f"Error fetching bars: {response.status_code}")
+            return []
+    except Exception as e:
+        print(f"Exception fetching bars: {e}")
+        return []
+
+
+class PollingEngine:
+    """
+    Background polling engine for periodic data updates.
+    Polls Greeks/IV at configurable intervals.
+    """
+    
+    def __init__(self):
+        self._running = False
+        self._thread = None
+        self._interval = 3  # seconds
+        self._cached_data = {}
+        self._callbacks = []
+    
+    def start(self, ticker: str, interval: int = 3):
+        """Start polling for a ticker"""
+        import threading
+        
+        if self._running:
+            return
+        
+        self._interval = interval
+        self._running = True
+        self._thread = threading.Thread(
+            target=self._poll_loop,
+            args=(ticker,),
+            daemon=True
+        )
+        self._thread.start()
+    
+    def stop(self):
+        """Stop polling"""
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=2)
+    
+    def _poll_loop(self, ticker: str):
+        """Main polling loop"""
+        import time
+        
+        while self._running:
+            try:
+                # Get current price
+                price = get_current_price(ticker)
+                if price:
+                    self._cached_data["price"] = price
+                    self._cached_data["last_update"] = datetime.now().isoformat()
+                
+                # Get IV
+                if price:
+                    iv = get_implied_volatility(ticker, price)
+                    self._cached_data["iv"] = iv
+                
+                # Notify callbacks
+                for callback in self._callbacks:
+                    try:
+                        callback(self._cached_data)
+                    except:
+                        pass
+                
+            except Exception as e:
+                print(f"Polling error: {e}")
+            
+            time.sleep(self._interval)
+    
+    def add_callback(self, callback):
+        """Add a callback for data updates"""
+        self._callbacks.append(callback)
+    
+    def get_cached_data(self) -> Dict:
+        """Get the latest cached data"""
+        return self._cached_data.copy()
+
+
+# Singleton polling engine
+polling_engine = PollingEngine()
