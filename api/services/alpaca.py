@@ -86,7 +86,7 @@ class AlpacaService:
                 "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "end": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "limit": limit,
-                "feed": "iex"
+                "feed": "sip"  # Use SIP for real-time data
             }
             
             response = requests.get(url, headers=self.headers, params=params)

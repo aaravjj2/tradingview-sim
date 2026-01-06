@@ -41,7 +41,26 @@ export function useMarketData(ticker: string) {
         try {
             setLoading(true);
             const response = await axios.get(`/api/market/candles/${ticker}?limit=100`);
-            setCandles(response.data);
+
+            // Normalize dates to current year (Alpaca free tier returns older data)
+            const rawCandles = response.data as CandleData[];
+            if (rawCandles.length > 0) {
+                const lastDate = new Date(rawCandles[rawCandles.length - 1].timestamp);
+                const today = new Date();
+                const daysDiff = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                const normalizedCandles = rawCandles.map((candle: CandleData) => {
+                    const originalDate = new Date(candle.timestamp);
+                    originalDate.setDate(originalDate.getDate() + daysDiff);
+                    return {
+                        ...candle,
+                        timestamp: originalDate.toISOString(),
+                    };
+                });
+                setCandles(normalizedCandles);
+            } else {
+                setCandles(rawCandles);
+            }
             setError(null);
         } catch (err) {
             setError('Failed to fetch candle data');

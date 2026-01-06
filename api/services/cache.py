@@ -73,10 +73,26 @@ async def init_database():
 
 
 async def get_cached_candles(ticker: str, timeframe: str, limit: int) -> Optional[List[Dict]]:
-    """Get cached candles if available and fresh"""
+    """Get cached candles if available and fresh (within 1 hour)"""
     try:
         async with aiosqlite.connect(DATABASE_PATH) as db:
             db.row_factory = aiosqlite.Row
+            
+            # Check cache freshness - only use if updated within last hour
+            cursor = await db.execute("""
+                SELECT MAX(created_at) as latest FROM candles
+                WHERE ticker = ? AND timeframe = ?
+            """, (ticker, timeframe))
+            row = await cursor.fetchone()
+            
+            if row and row["latest"]:
+                try:
+                    latest = datetime.fromisoformat(row["latest"].replace('Z', '+00:00'))
+                    age = (datetime.now() - latest.replace(tzinfo=None)).total_seconds()
+                    if age > 3600:  # 1 hour expiration
+                        return None  # Force refresh
+                except:
+                    pass
             
             cursor = await db.execute("""
                 SELECT timestamp, open, high, low, close, volume

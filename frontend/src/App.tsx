@@ -4,6 +4,7 @@ import Supergraph from './components/Supergraph';
 import GreeksPanel from './components/GreeksPanel';
 import Backtester from './components/Backtester';
 import TradeJournal from './components/TradeJournal';
+import TradingBot from './components/TradingBot';
 import LiveModeToggle from './components/LiveModeToggle';
 import { useMarketData, useGreeks, useHeartbeatStatus } from './hooks/useMarketData';
 
@@ -19,8 +20,9 @@ function App() {
   const [hoveredTimestamp, setHoveredTimestamp] = useState<string | undefined>();
   const [showBacktester, setShowBacktester] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
+  const [showBot, setShowBot] = useState(false);
 
-  const { price, candles, loading, error, lastUpdate } = useMarketData(ticker);
+  const { price, candles, loading, error, lastUpdate, refetch } = useMarketData(ticker);
   const greeks = useGreeks(ticker, price?.price ?? 500, DEMO_LEGS);
   const heartbeatStatus = useHeartbeatStatus(lastUpdate);
 
@@ -54,26 +56,42 @@ function App() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Ticker Input */}
             <input
               type="text"
               value={ticker}
               onChange={(e) => setTicker(e.target.value.toUpperCase())}
-              className="bg-[#1a1f2e] border border-white/20 rounded-lg px-3 py-2 text-sm w-24 focus:outline-none focus:border-blue-500"
+              className="bg-[#1a1f2e] border border-white/20 rounded-lg px-3 py-2 text-sm w-20 focus:outline-none focus:border-blue-500"
               placeholder="Ticker"
             />
 
             {/* Price Display with Heartbeat */}
             {price && (
-              <div className="bg-[#1a1f2e] rounded-lg px-4 py-2 flex items-center gap-2">
+              <div className="bg-[#1a1f2e] rounded-lg px-3 py-2 flex items-center gap-2">
                 <span className={`inline-block w-2 h-2 rounded-full ${heartbeatStatus === 'live' ? 'bg-green-500 animate-pulse' :
                     heartbeatStatus === 'stale' ? 'bg-yellow-500' : 'bg-red-500'
                   }`} />
-                <span className="text-gray-400 text-sm">Price: </span>
-                <span className="text-white font-mono font-bold">${price.price.toFixed(2)}</span>
+                <span className="text-white font-mono font-bold text-sm">${price.price.toFixed(2)}</span>
               </div>
             )}
+
+            {/* Refresh Button */}
+            <button
+              onClick={() => refetch()}
+              className="bg-[#1a1f2e] border border-white/20 rounded-lg p-2 text-sm hover:border-blue-500 transition"
+              title="Refresh Data"
+            >
+              🔄
+            </button>
+
+            {/* Bot Button */}
+            <button
+              onClick={() => setShowBot(true)}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg px-3 py-2 text-sm font-semibold hover:opacity-90 transition"
+            >
+              🤖 Bot
+            </button>
 
             {/* Backtester Button */}
             <button
@@ -195,6 +213,14 @@ function App() {
       )}
       {showJournal && (
         <TradeJournal onClose={() => setShowJournal(false)} />
+      )}
+      {showBot && (
+        <TradingBot
+          ticker={ticker}
+          currentPrice={price?.price ?? 500}
+          paperMode={paperMode}
+          onClose={() => setShowBot(false)}
+        />
       )}
     </div>
   );
