@@ -406,3 +406,47 @@ class PollingEngine:
 
 # Singleton polling engine
 polling_engine = PollingEngine()
+
+
+def submit_order_to_alpaca(symbol: str, qty: int, side: str, 
+                           type: str = "market", time_in_force: str = "day",
+                           limit_price: float = None) -> Dict:
+    """
+    Submit an order to Alpaca API
+    
+    Args:
+        symbol: Ticker symbol (or option symbol)
+        qty: Quantity
+        side: 'buy' or 'sell'
+        type: 'market' or 'limit'
+        time_in_force: 'day', 'gtc', etc.
+        limit_price: Limit price for limit orders
+        
+    Returns:
+        Order response dictionary
+    """
+    try:
+        url = f"{data_manager.base_url}/v2/orders"
+        
+        payload = {
+            "symbol": symbol,
+            "qty": qty,
+            "side": side,
+            "type": type,
+            "time_in_force": time_in_force
+        }
+        
+        if type == "limit" and limit_price:
+            payload["limit_price"] = limit_price
+            
+        response = requests.post(url, headers=data_manager.headers, json=payload)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Error submitting order: {response.status_code} - {response.text}")
+            return {"error": response.text}
+            
+    except Exception as e:
+        print(f"Exception submitting order: {e}")
+        return {"error": str(e)}

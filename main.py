@@ -777,6 +777,7 @@ with greek_col4:
     st.metric("Vega (ν)", f"${position_greeks.get('vega', 0):.2f}")
 
 with account_col:
+    # Order Execution Logic (Paper)
     if st.session_state.paper_mode:
         summary = paper_account.get_summary()
         st.markdown(f"""
@@ -786,27 +787,111 @@ with account_col:
         - Open Positions: {summary['open_positions']}
         """)
         
-        # Execute strategy button
+        # Routing Toggle
+        use_alpaca_paper = st.checkbox("Route to Alpaca Paper API", value=False,
+                                      help="If checked, orders are sent to Alpaca's Paper Ledger instead of the local simulator.")
+        
         if st.button("📥 Execute Strategy (Paper)", type="primary"):
-            prices = {str(i): leg.premium for i, leg in enumerate(legs)}
-            strategy = Strategy(
-                name=strategy_name,
-                ticker=ticker,
-                legs=[OptionLeg(
-                    option_type=leg.option_type,
-                    position=leg.position,
-                    strike=leg.strike,
-                    premium=leg.premium,
-                    quantity=leg.quantity,
-                    expiration_days=leg.expiration_days,
-                    iv=leg.iv
-                ) for leg in legs]
-            )
-            if paper_account.execute_strategy(strategy, prices):
-                st.success("✅ Strategy executed in paper account!")
-                st.rerun()
+            from data_manager import submit_order_to_alpaca
+            
+            # Execute logic
+            success = True
+            messages = []
+            
+            # 1. Local Simulation execution
+            if not use_alpaca_paper:
+                prices = {str(i): leg.premium for i, leg in enumerate(legs)}
+                strategy = Strategy(
+                    name=strategy_name,
+                    ticker=ticker,
+                    legs=[OptionLeg(
+                        option_type=leg.option_type,
+                        position=leg.position,
+                        strike=leg.strike,
+                        premium=leg.premium,
+                        quantity=leg.quantity,
+                        expiration_days=leg.expiration_days,
+                        iv=leg.iv
+                    ) for leg in legs]
+                )
+                if paper_account.execute_strategy(strategy, prices):
+                    messages.append("✅ Strategy executed in local simulator!")
+                else:
+                    success = False
+                    messages.append("❌ Insufficient funds in local account")
+            
+            # 2. Alpaca Paper API execution
             else:
-                st.error("❌ Insufficient funds")
+                for i, leg in enumerate(legs):
+                    # For stock
+                    if leg.option_type == "stock":
+                         side = "buy" if leg.sign > 0 else "sell"
+                         resp = submit_order_to_alpaca(
+                             symbol=ticker, 
+                             qty=leg.quantity, 
+                             side=side
+                         )
+                         if "id" in resp:
+                             messages.append(f"✅ Stock Order: {side.upper()} {leg.quantity} {ticker}")
+                         else:
+                             success = False
+                             messages.append(f"❌ Stock Error: {resp.get('error')}")
+                    
+                    # For options
+                    else:
+                        # Construct option symbol (e.g. SPY240119C00400000)
+                        # We need to format the expiration date properly: YYMMDD
+                        try:
+                            # Parse expiration from calculated days or fetch if available
+                            # Simplification: we might need exact expiration date string here
+                            # For now, we'll iterate expirations to find the one matching our days (approx)
+                            
+                            # Re-fetch actual expiration date string we selected
+                            if 'selected_expiration' in locals():
+                                exp_str = selected_expiration # YYYY-MM-DD
+                                exp_date = datetime.strptime(exp_str, "%Y-%m-%d")
+                                year_short = exp_date.strftime("%y")
+                                month_str = exp_date.strftime("%m")
+                                day_str = exp_date.strftime("%d")
+                                
+                                # Format strike price (5 digits integer, 3 decimals) -> * 1000, 8 chars total
+                                strike_val = int(leg.strike * 1000)
+                                strike_str = f"{strike_val:08d}"
+                                
+                                type_char = "C" if leg.option_type == "call" else "P"
+                                
+                                option_symbol = f"{ticker}{year_short}{month_str}{day_str}{type_char}{strike_str}"
+                                
+                                side = "buy" if leg.sign > 0 else "sell"
+                                resp = submit_order_to_alpaca(
+                                    symbol=option_symbol,
+                                    qty=leg.quantity,
+                                    side=side
+                                )
+                                
+                                if "id" in resp:
+                                    messages.append(f"✅ Option Order: {side.upper()} {option_symbol}")
+                                else:
+                                    success = False
+                                    messages.append(f"❌ Option Error: {resp.get('error')}")
+                                    
+                        except Exception as e:
+                            success = False
+                            messages.append(f"❌ Symbol Generation Error: {str(e)}")
+
+            # Show results
+            if success:
+                for msg in messages:
+                    st.success(msg)
+                if not use_alpaca_paper:
+                    st.rerun()
+            else:
+                for msg in messages:
+                    if "✅" in msg:
+                        st.success(msg)
+                    else:
+                        st.error(msg)
+
     else:
         st.warning("🔴 LIVE MODE - Connected to real broker")
 
