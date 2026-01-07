@@ -66,7 +66,7 @@ export function useMarketData(ticker: string, options: MarketDataOptions = {}) {
 
             // Normalize dates to current year (Alpaca free tier returns older data)
             const rawCandles = response.data as CandleData[];
-            if (rawCandles.length > 0) {
+            if (Array.isArray(rawCandles) && rawCandles.length > 0) {
                 const lastDate = new Date(rawCandles[rawCandles.length - 1].timestamp);
                 const today = new Date();
                 const daysDiff = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));

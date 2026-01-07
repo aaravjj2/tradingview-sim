@@ -81,18 +81,29 @@ class AlpacaService:
                 start = end - timedelta(minutes=limit * 5)
             
             url = f"{self.data_url}/v2/stocks/{ticker}/bars"
+            
+            # Request more data to ensure we reach the end date
+            # Then slice the last 'limit' bars
+            request_limit = min(limit * 2, 10000) 
+            
             params = {
                 "timeframe": timeframe,
                 "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "end": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "limit": limit,
-                "feed": "sip"  # Use SIP for real-time data
+                "limit": request_limit, 
+                "feed": "sip"
             }
             
             response = requests.get(url, headers=self.headers, params=params)
             
             if response.status_code == 200:
                 data = response.json()
+                bars = data.get("bars", [])
+                
+                # Return the LATEST 'limit' bars
+                if len(bars) > limit:
+                    bars = bars[-limit:]
+                    
                 return [
                     {
                         "timestamp": bar.get("t", ""),
@@ -102,7 +113,7 @@ class AlpacaService:
                         "close": bar.get("c", 0),
                         "volume": bar.get("v", 0)
                     }
-                    for bar in data.get("bars", [])
+                    for bar in bars
                 ]
             return []
         except Exception as e:
