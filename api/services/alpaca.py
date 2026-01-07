@@ -33,7 +33,18 @@ class AlpacaService:
     async def get_current_price(self, ticker: str) -> Optional[Dict]:
         """Fetch current stock price"""
         try:
-            url = f"{self.data_url}/v2/stocks/{ticker}/quotes/latest"
+            # Synthetic Futures Handling
+            # GC (Gold) -> 10x GLD (Approximate Spot/Futures pricing)
+            is_synthetic = False
+            target_ticker = ticker
+            multiplier = 1.0
+
+            if ticker == "GC":
+                is_synthetic = True
+                target_ticker = "GLD"
+                multiplier = 10.0
+
+            url = f"{self.data_url}/v2/stocks/{target_ticker}/quotes/latest"
             response = requests.get(url, headers=self.headers)
             
             if response.status_code == 200:
@@ -42,8 +53,13 @@ class AlpacaService:
                 bid = quote.get("bp", 0)
                 ask = quote.get("ap", 0)
                 
-                price = (bid + ask) / 2 if bid and ask else await self._get_last_trade(ticker)
+                price = (bid + ask) / 2 if bid and ask else await self._get_last_trade(target_ticker)
                 
+                if is_synthetic and price:
+                    price *= multiplier
+                    bid *= multiplier
+                    ask *= multiplier
+
                 return {
                     "ticker": ticker,
                     "price": price,
@@ -71,6 +87,16 @@ class AlpacaService:
                                    limit: int = 100) -> List[Dict]:
         """Fetch historical OHLCV bars"""
         try:
+            # Synthetic Futures Handling
+            is_synthetic = False
+            target_ticker = ticker
+            multiplier = 1.0
+
+            if ticker == "GC":
+                is_synthetic = True
+                target_ticker = "GLD"
+                multiplier = 10.0
+
             end = datetime.now()
             
             if timeframe == "1Day":
@@ -80,7 +106,7 @@ class AlpacaService:
             else:
                 start = end - timedelta(minutes=limit * 5)
             
-            url = f"{self.data_url}/v2/stocks/{ticker}/bars"
+            url = f"{self.data_url}/v2/stocks/{target_ticker}/bars"
             
             # Request more data to ensure we reach the end date
             # Then slice the last 'limit' bars
@@ -107,11 +133,11 @@ class AlpacaService:
                 return [
                     {
                         "timestamp": bar.get("t", ""),
-                        "open": bar.get("o", 0),
-                        "high": bar.get("h", 0),
-                        "low": bar.get("l", 0),
-                        "close": bar.get("c", 0),
-                        "volume": bar.get("v", 0)
+                        "open": bar.get("o", 0) * multiplier,
+                        "high": bar.get("h", 0) * multiplier,
+                        "low": bar.get("l", 0) * multiplier,
+                        "close": bar.get("c", 0) * multiplier,
+                        "volume": bar.get("v", 0) # Volume stays same (or could scale?)
                     }
                     for bar in bars
                 ]
