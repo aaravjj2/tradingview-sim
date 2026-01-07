@@ -43,6 +43,7 @@ export function useMarketData(ticker: string, options: MarketDataOptions = {}) {
             });
             const endTime = performance.now();
 
+            console.log('API_PRICE_RESPONSE:', ticker, response.data);
             setPrice(response.data);
             setLastUpdate(new Date());
             setLatency(Math.round(endTime - startTime));

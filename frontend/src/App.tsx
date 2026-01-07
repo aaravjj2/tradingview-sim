@@ -91,7 +91,7 @@ function App() {
                 <span className={`inline-block w-2 h-2 rounded-full ${heartbeatStatus === 'live' ? 'bg-green-500 animate-pulse' :
                   heartbeatStatus === 'stale' ? 'bg-yellow-500' : 'bg-red-500'
                   }`} />
-                <span className="text-white font-mono font-bold text-sm">${price.price.toFixed(2)}</span>
+                <span className="text-white font-mono font-bold text-sm">${(price.price ?? 0).toFixed(2)}</span>
               </div>
             )}
 
