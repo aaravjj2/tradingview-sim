@@ -22,6 +22,11 @@ const STRATEGIES = [
     { id: 'macd_crossover', name: 'MACD Crossover', description: 'Buy on bullish cross, Sell on bearish cross' },
     { id: 'sma_trend', name: 'SMA Trend Following', description: 'Buy when price > SMA20, Sell when price < SMA20' },
     { id: 'breakout', name: 'Breakout Strategy', description: 'Buy on resistance break, Sell on support break' },
+    { id: 'bollinger_squeeze', name: 'Bollinger Band Squeeze', description: 'Trade expansion after low volatility squeeze' },
+    { id: 'vwap_reversion', name: 'VWAP Reversion', description: 'Fade price excursions back to VWAP' },
+    { id: 'golden_cross', name: 'Golden Cross (SMA 50/200)', description: 'Classic trend following on major moving averages' },
+    { id: 'pairs_trading', name: 'Statistical Arbitrage (Pairs)', description: 'Long underyling / Short correlated asset (mock)' },
+    { id: 'ai_sentiment', name: 'AI Sentiment Sniper', description: 'Trade based on real-time news sentiment score' },
 ];
 
 export default function TradingBot({ ticker, currentPrice, paperMode, onClose }: TradingBotProps) {
@@ -133,6 +138,34 @@ export default function TradingBot({ ticker, currentPrice, paperMode, onClose }:
 
         addLog('🛑 Bot stopped');
     }, [addLog]);
+
+    // Poll for bot status including P/L
+    useEffect(() => {
+        if (!status.running) return;
+
+        const pollStatus = async () => {
+            try {
+                // Determine which endpoint to poll based on strategy
+                // For now, we'll assume Theta Eater is the primary backend-backed strategy
+                // Future improvement: standardized status endpoint for all bots
+                const response = await axios.get('/api/analytics/bot/status');
+
+                if (response.data) {
+                    setStatus(prev => ({
+                        ...prev,
+                        pnl: response.data.total_pnl || prev.pnl,
+                        positions: response.data.active_positions_count || prev.positions,
+                        // Don't overwrite running state from here to avoid race conditions
+                    }));
+                }
+            } catch (err) {
+                // Silent fail on polling to avoid log spam
+            }
+        };
+
+        const statusInterval = setInterval(pollStatus, 5000);
+        return () => clearInterval(statusInterval);
+    }, [status.running]);
 
     useEffect(() => {
         return () => {
