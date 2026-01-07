@@ -104,3 +104,28 @@ async def get_implied_volatility(ticker: str):
     
     iv = await alpaca.get_implied_volatility(ticker, price_data["price"])
     return {"ticker": ticker, "iv": iv}
+
+
+@router.get("/oi/{ticker}")
+async def get_open_interest(ticker: str):
+    """Get Open Interest profile for gamma pin analysis"""
+    from services.open_interest import get_open_interest_profile
+    
+    price_data = await alpaca.get_current_price(ticker)
+    if not price_data:
+        raise HTTPException(status_code=404, detail="Could not fetch price")
+    
+    return await get_open_interest_profile(ticker, price_data["price"])
+
+
+@router.get("/gex/{ticker}")
+async def get_gamma_exposure(ticker: str):
+    """Get Gamma Exposure (GEX) profile"""
+    from services.open_interest import get_gex_profile
+    
+    price_data = await alpaca.get_current_price(ticker)
+    if not price_data:
+        raise HTTPException(status_code=404, detail="Could not fetch price")
+    
+    return await get_gex_profile(ticker, price_data["price"])
+

@@ -14,6 +14,10 @@ import KellyCalculator from './components/KellyCalculator';
 import PanicButton from './components/PanicButton';
 import LatencyMonitor from './components/LatencyMonitor';
 import QuickStart from './components/QuickStart';
+import OpenInterestOverlay from './components/OpenInterestOverlay';
+import GEXProfile from './components/GEXProfile';
+import StrategyComparison from './components/StrategyComparison';
+import IVRVCone from './components/IVRVCone';
 import { useMarketData, useGreeks, useHeartbeatStatus } from './hooks/useMarketData';
 
 // Demo legs for testing
@@ -255,6 +259,12 @@ function App() {
                   heartbeatStatus={heartbeatStatus}
                 />
 
+                {/* Strategy Comparison & IV/RV Cone */}
+                <div className="grid grid-cols-2 gap-6 mt-6">
+                  <StrategyComparison currentPrice={price?.price ?? 500} />
+                  <IVRVCone ticker={ticker} currentPrice={price?.price ?? 500} />
+                </div>
+
                 {/* Strategy Info */}
                 <div className="mt-6 bg-[#1a1f2e] rounded-xl p-4">
                   <h3 className="text-lg font-semibold mb-3">📋 Strategy: Long Call</h3>
@@ -296,6 +306,18 @@ function App() {
 
                   {/* Max Pain */}
                   <MaxPainIndicator
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                  />
+                </div>
+
+                {/* Open Interest & GEX Section */}
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                  <OpenInterestOverlay
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                  />
+                  <GEXProfile
                     ticker={ticker}
                     currentPrice={price?.price ?? 500}
                   />
