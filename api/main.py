@@ -12,7 +12,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from routers import market, strategy, backtest
+from routers import market, strategy, backtest, volatility
 from services.cache import init_database
 
 @asynccontextmanager
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Supergraph Pro API",
     description="Professional Options Trading Dashboard Backend",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan
 )
 
@@ -41,6 +41,7 @@ app.add_middleware(
 app.include_router(market.router, prefix="/api/market", tags=["Market Data"])
 app.include_router(strategy.router, prefix="/api/strategy", tags=["Strategy"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["Backtest"])
+app.include_router(volatility.router, prefix="/api/volatility", tags=["Volatility Analysis"])
 
 
 @app.get("/api/health")

@@ -1,8 +1,13 @@
+import { useState } from 'react';
+
 interface GreeksPanelProps {
     delta: number;
     gamma: number;
     theta: number;
     vega: number;
+    vanna?: number;
+    charm?: number;
+    betaWeightedDelta?: number;
     netDelta?: number;
     heartbeatStatus?: 'live' | 'stale' | 'disconnected';
 }
@@ -12,9 +17,14 @@ export default function GreeksPanel({
     gamma,
     theta,
     vega,
+    vanna = 0,
+    charm = 0,
+    betaWeightedDelta,
     netDelta,
     heartbeatStatus = 'live'
 }: GreeksPanelProps) {
+    const [showSecondOrder, setShowSecondOrder] = useState(false);
+
     const getDeltaWarning = () => {
         if (netDelta === undefined) return null;
         const absDelta = Math.abs(netDelta);
@@ -46,22 +56,44 @@ export default function GreeksPanel({
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                     📐 Position Greeks
                 </h3>
-                <div className="flex items-center text-sm text-gray-400">
-                    {getHeartbeatIndicator()}
-                    {heartbeatStatus === 'live' ? 'Live' : heartbeatStatus === 'stale' ? 'Updating...' : 'Disconnected'}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setShowSecondOrder(!showSecondOrder)}
+                        className={`text-xs px-2 py-1 rounded ${showSecondOrder ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-700 text-gray-400'
+                            }`}
+                    >
+                        2nd Order
+                    </button>
+                    <div className="flex items-center text-sm text-gray-400">
+                        {getHeartbeatIndicator()}
+                        {heartbeatStatus === 'live' ? 'Live' : heartbeatStatus === 'stale' ? 'Updating...' : 'Disconnected'}
+                    </div>
                 </div>
             </div>
 
             {/* Warning Banner */}
             {warning && (
                 <div className={`mb-4 px-4 py-2 rounded-lg text-sm font-medium ${warning.level === 'danger' ? 'bg-red-900/50 text-red-300 border border-red-700' :
-                        warning.level === 'warning' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-700' :
-                            'bg-green-900/50 text-green-300 border border-green-700'
+                    warning.level === 'warning' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-700' :
+                        'bg-green-900/50 text-green-300 border border-green-700'
                     }`}>
                     {warning.message}
                 </div>
             )}
 
+            {/* Beta-Weighted Delta */}
+            {betaWeightedDelta !== undefined && (
+                <div className="mb-4 px-4 py-2 bg-blue-900/30 rounded-lg border border-blue-700/50">
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm text-blue-300">β-Weighted Delta (SPY Equiv)</span>
+                        <span className={`text-lg font-bold ${betaWeightedDelta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {betaWeightedDelta >= 0 ? '+' : ''}{betaWeightedDelta.toFixed(2)}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* First-Order Greeks */}
             <div className="grid grid-cols-4 gap-4">
                 {/* Delta */}
                 <div className="text-center">
@@ -99,6 +131,47 @@ export default function GreeksPanel({
                     <div className="text-xs text-gray-500 mt-1">per 1% IV</div>
                 </div>
             </div>
+
+            {/* Second-Order Greeks */}
+            {showSecondOrder && (
+                <div className="mt-4 pt-4 border-t border-white/10">
+                    <div className="text-xs text-gray-400 uppercase mb-3">Second-Order Greeks</div>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Vanna */}
+                        <div className="bg-[#0f1117] rounded-lg p-3">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <div className="text-gray-400 text-xs">Vanna</div>
+                                    <div className="text-xs text-gray-500">∂Δ/∂σ</div>
+                                </div>
+                                <div className={`text-lg font-bold ${vanna >= 0 ? 'text-cyan-400' : 'text-orange-400'}`}>
+                                    {vanna.toFixed(4)}
+                                </div>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                                Delta sensitivity to volatility
+                            </div>
+                        </div>
+
+                        {/* Charm */}
+                        <div className="bg-[#0f1117] rounded-lg p-3">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <div className="text-gray-400 text-xs">Charm</div>
+                                    <div className="text-xs text-gray-500">∂Δ/∂t</div>
+                                </div>
+                                <div className={`text-lg font-bold ${charm >= 0 ? 'text-teal-400' : 'text-pink-400'}`}>
+                                    {charm.toFixed(4)}
+                                </div>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                                Delta decay over time
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+

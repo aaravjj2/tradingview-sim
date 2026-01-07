@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
+import { createChart, CandlestickSeries, LineSeries, AreaSeries } from 'lightweight-charts';
 
 interface CandleChartProps {
     ticker: string;
     data: CandleData[];
     breakevens?: number[];
+    probabilityCone?: {
+        upper_1sigma: number;
+        lower_1sigma: number;
+        upper_2sigma: number;
+        lower_2sigma: number;
+        days: number;
+    };
     onHover?: (price: number, timestamp: string) => void;
     hoveredTimestamp?: string;
 }
@@ -22,13 +29,16 @@ export default function CandleChart({
     ticker,
     data,
     breakevens = [],
+    probabilityCone,
     onHover,
     hoveredTimestamp
 }: CandleChartProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
     const seriesRef = useRef<any>(null);
+    const coneSeriesRefs = useRef<any[]>([]);
     const [currentPrice, setCurrentPrice] = useState<number>(0);
+    const [showCone, setShowCone] = useState(true);
 
     // Initialize chart
     useEffect(() => {
@@ -140,7 +150,7 @@ export default function CandleChart({
                 seriesRef.current.createPriceLine({
                     price: be,
                     color: '#FF9800',
-                    lineWidth: 1,
+                    lineWidth: 2,
                     lineStyle: 2,
                     axisLabelVisible: true,
                     title: `BE ${index + 1}`,
@@ -151,16 +161,74 @@ export default function CandleChart({
         });
     }, [breakevens, data]);
 
+    // Add probability cone visualization
+    useEffect(() => {
+        if (!chartRef.current || !probabilityCone || !showCone || data.length === 0) return;
+
+        const lastDate = new Date(data[data.length - 1].timestamp);
+
+        // Create future dates for cone projection
+        const futureData1Sigma: { time: string; value: number }[] = [];
+        const futureData2Sigma: { time: string; value: number }[] = [];
+
+        for (let i = 0; i <= probabilityCone.days; i++) {
+            const futureDate = new Date(lastDate);
+            futureDate.setDate(futureDate.getDate() + i);
+            const dateStr = futureDate.toISOString().split('T')[0];
+
+            // Linear interpolation for cone expansion
+            const ratio = i / probabilityCone.days;
+            const upper1 = currentPrice + (probabilityCone.upper_1sigma - currentPrice) * ratio;
+            const lower1 = currentPrice + (probabilityCone.lower_1sigma - currentPrice) * ratio;
+
+            futureData1Sigma.push({ time: dateStr, value: upper1 });
+        }
+
+        // Note: Lightweight Charts area series doesn't support upper/lower bounds natively
+        // We'll use line series to represent cone boundaries
+        try {
+            const upperSeries = chartRef.current.addSeries(LineSeries, {
+                color: 'rgba(100, 181, 246, 0.5)',
+                lineWidth: 1,
+                lineStyle: 2,
+            });
+            upperSeries.setData(futureData1Sigma);
+            coneSeriesRefs.current.push(upperSeries);
+        } catch (err) {
+            console.warn('Could not add cone series:', err);
+        }
+    }, [probabilityCone, showCone, data, currentPrice]);
+
     return (
         <div className="bg-[#1a1f2e] rounded-xl p-4 h-full">
             <div className="flex justify-between items-center mb-3">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                     📊 {ticker} Price Chart
                 </h3>
-                <div className="text-sm text-gray-400">
-                    Current: <span className="text-white font-mono">${currentPrice.toFixed(2)}</span>
+                <div className="flex items-center gap-4">
+                    {probabilityCone && (
+                        <button
+                            onClick={() => setShowCone(!showCone)}
+                            className={`text-xs px-2 py-1 rounded ${showCone ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-700 text-gray-400'
+                                }`}
+                        >
+                            📐 Cone
+                        </button>
+                    )}
+                    <div className="text-sm text-gray-400">
+                        Current: <span className="text-white font-mono">${currentPrice.toFixed(2)}</span>
+                    </div>
                 </div>
             </div>
+
+            {/* Probability Cone Legend */}
+            {probabilityCone && showCone && (
+                <div className="flex gap-4 text-xs text-gray-400 mb-2">
+                    <span>1σ: ${probabilityCone.lower_1sigma.toFixed(2)} - ${probabilityCone.upper_1sigma.toFixed(2)}</span>
+                    <span>2σ: ${probabilityCone.lower_2sigma.toFixed(2)} - ${probabilityCone.upper_2sigma.toFixed(2)}</span>
+                </div>
+            )}
+
             <div
                 ref={chartContainerRef}
                 className="w-full h-[350px]"
@@ -168,3 +236,4 @@ export default function CandleChart({
         </div>
     );
 }
+
