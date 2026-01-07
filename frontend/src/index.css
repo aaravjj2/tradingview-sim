@@ -144,3 +144,123 @@ body {
 .border-themed {
   border-color: var(--border-color);
 }
+
+/* React Grid Layout Styles */
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+
+.react-grid-item.resizing {
+  z-index: 1;
+  will-change: width, height;
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 3;
+  will-change: transform;
+}
+
+.react-grid-item.dropping {
+  visibility: hidden;
+}
+
+.react-grid-item>.react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+}
+
+.react-grid-item>.react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 5px;
+  height: 5px;
+  border-right: 2px solid rgba(255, 255, 255, 0.4);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.react-grid-item>.react-resizable-handle.react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+.react-grid-item>.react-resizable-handle.react-resizable-handle-sw {
+  bottom: 0;
+  left: 0;
+  cursor: sw-resize;
+}
+
+/* Panel drag handle styling */
+.panel-drag-handle {
+  cursor: move;
+  user-select: none;
+}
+
+.panel-drag-handle:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Focus Mode */
+.focus-mode-active header,
+.focus-mode-active footer,
+.focus-mode-active .context-sidebar,
+.focus-mode-active .workspace-controls {
+  display: none !important;
+}
+
+.focus-mode-active main {
+  padding: 0 !important;
+  height: 100vh !important;
+}
+
+.focus-mode-active .focus-visible {
+  display: block !important;
+}
+
+/* Command Palette Animations */
+@keyframes palette-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.command-palette {
+  animation: palette-appear 150ms ease-out;
+}
+
+/* Link indicator pulse */
+@keyframes link-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.link-indicator-active {
+  animation: link-pulse 2s ease-in-out infinite;
+}

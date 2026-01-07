@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import CandleChart from './components/CandleChart';
 import Supergraph from './components/Supergraph';
 import GreeksPanel from './components/GreeksPanel';
@@ -21,6 +21,7 @@ import IVRVCone from './components/IVRVCone';
 import AIStrategyRecommender from './components/AIStrategyRecommender';
 import DraggableSupergraph from './components/DraggableSupergraph';
 import HistoricalPayoffReplay from './components/HistoricalPayoffReplay';
+import CommandPalette from './components/CommandPalette';
 import { useMarketData, useGreeks, useHeartbeatStatus } from './hooks/useMarketData';
 
 // Demo legs for testing
@@ -39,6 +40,8 @@ function App() {
   const [showKelly, setShowKelly] = useState(false);
   const [showPanic, setShowPanic] = useState(false);
   const [activeTab, setActiveTab] = useState<'charts' | 'analytics'>('charts');
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [showQuickStart, setShowQuickStart] = useState(() => {
     return localStorage.getItem('supergraph-quickstart-dismissed') !== 'true';
   });
@@ -47,6 +50,23 @@ function App() {
     setShowQuickStart(false);
     localStorage.setItem('supergraph-quickstart-dismissed', 'true');
   };
+
+  // Keyboard handler for Command Palette (Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(prev => !prev);
+      }
+      // Focus mode toggle with F key (when not in input)
+      if (e.key === 'f' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        // Don't toggle if user is typing
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const { price, candles, loading, error, lastUpdate, latency, refreshCount, refetch } = useMarketData(ticker);
   const greeks = useGreeks(ticker, price?.price ?? 500, DEMO_LEGS);
@@ -402,6 +422,20 @@ function App() {
       {showPanic && (
         <PanicButton onClose={() => setShowPanic(false)} />
       )}
+
+      {/* Command Palette (Ctrl+K) */}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        onTicker={(t) => setTicker(t)}
+        onTogglePaperMode={() => setPaperMode(!paperMode)}
+        onOpenBot={() => setShowBot(true)}
+        onOpenBacktest={() => setShowBacktester(true)}
+        onOpenJournal={() => setShowJournal(true)}
+        onCloseAll={() => setShowPanic(true)}
+        onToggleTab={(tab) => setActiveTab(tab)}
+        onToggleFocusMode={() => setFocusMode(!focusMode)}
+      />
     </div>
   );
 }
