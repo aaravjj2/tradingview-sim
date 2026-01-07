@@ -14,6 +14,7 @@ interface CandleChartProps {
     };
     onHover?: (price: number, timestamp: string) => void;
     hoveredTimestamp?: string;
+    currentPrice?: number;
 }
 
 interface CandleData {
@@ -31,7 +32,8 @@ export default function CandleChart({
     breakevens = [],
     probabilityCone,
     onHover,
-    hoveredTimestamp
+    hoveredTimestamp,
+    currentPrice: livePrice
 }: CandleChartProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
@@ -133,12 +135,21 @@ export default function CandleChart({
 
         seriesRef.current.setData(chartData);
 
-        if (data.length > 0) {
+        if (livePrice) {
+            setCurrentPrice(livePrice);
+        } else if (data.length > 0) {
             setCurrentPrice(data[data.length - 1].close);
         }
 
         chartRef.current?.timeScale().fitContent();
-    }, [data]);
+    }, [data, livePrice]);
+
+    // Update display price when external price changes
+    useEffect(() => {
+        if (livePrice) {
+            setCurrentPrice(livePrice);
+        }
+    }, [livePrice]);
 
     // Add breakeven lines
     useEffect(() => {
@@ -169,7 +180,7 @@ export default function CandleChart({
 
         // Create future dates for cone projection
         const futureData1Sigma: { time: string; value: number }[] = [];
-        const futureData2Sigma: { time: string; value: number }[] = [];
+        const futureData2Sigma: { time: string; value: number }[] = []; // Unused but kept for structure
 
         for (let i = 0; i <= probabilityCone.days; i++) {
             const futureDate = new Date(lastDate);
@@ -184,8 +195,6 @@ export default function CandleChart({
             futureData1Sigma.push({ time: dateStr, value: upper1 });
         }
 
-        // Note: Lightweight Charts area series doesn't support upper/lower bounds natively
-        // We'll use line series to represent cone boundaries
         try {
             const upperSeries = chartRef.current.addSeries(LineSeries, {
                 color: 'rgba(100, 181, 246, 0.5)',
@@ -221,7 +230,6 @@ export default function CandleChart({
                 </div>
             </div>
 
-            {/* Probability Cone Legend */}
             {probabilityCone && showCone && (
                 <div className="flex gap-4 text-xs text-gray-400 mb-2">
                     <span>1σ: ${probabilityCone.lower_1sigma.toFixed(2)} - ${probabilityCone.upper_1sigma.toFixed(2)}</span>

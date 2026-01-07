@@ -59,13 +59,15 @@ async def get_current_price(ticker: str):
 async def get_candles(
     ticker: str,
     timeframe: str = Query("1Day", description="1Min, 5Min, 15Min, 1Hour, 1Day"),
-    limit: int = Query(100, ge=1, le=1000)
+    limit: int = Query(100, ge=1, le=1000),
+    fresh: bool = Query(False, description="Force fresh data from API")
 ):
     """Get historical candle data with caching"""
-    # Check cache first
-    cached = await get_cached_candles(ticker, timeframe, limit)
-    if cached:
-        return cached
+    # Check cache first (unless fresh=True)
+    if not fresh:
+        cached = await get_cached_candles(ticker, timeframe, limit)
+        if cached:
+            return cached
     
     # Fetch from Alpaca
     candles = await alpaca.get_historical_bars(ticker, timeframe, limit)

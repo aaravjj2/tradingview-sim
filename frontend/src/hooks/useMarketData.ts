@@ -38,7 +38,9 @@ export function useMarketData(ticker: string, options: MarketDataOptions = {}) {
     const fetchPrice = useCallback(async () => {
         const startTime = performance.now();
         try {
-            const response = await axios.get(`/api/market/price/${ticker}`);
+            const response = await axios.get(`/api/market/price/${ticker}`, {
+                params: { _t: Date.now() }
+            });
             const endTime = performance.now();
 
             setPrice(response.data);
@@ -55,7 +57,12 @@ export function useMarketData(ticker: string, options: MarketDataOptions = {}) {
     const fetchCandles = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`/api/market/candles/${ticker}?limit=100`);
+            const response = await axios.get(`/api/market/candles/${ticker}?limit=100`, {
+                params: {
+                    _t: Date.now(),
+                    fresh: true
+                }
+            });
 
             // Normalize dates to current year (Alpaca free tier returns older data)
             const rawCandles = response.data as CandleData[];

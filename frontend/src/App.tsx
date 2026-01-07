@@ -228,6 +228,7 @@ function App() {
                   <CandleChart
                     ticker={ticker}
                     data={candles}
+                    currentPrice={price?.price}
                     breakevens={breakevens}
                     onHover={handleCandleHover}
                     hoveredTimestamp={hoveredTimestamp}
