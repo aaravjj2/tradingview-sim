@@ -159,7 +159,7 @@ export default function Supergraph({
                 </div>
             </div>
 
-            <svg width="100%" viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+            <svg width="100%" viewBox={`0 0 ${width} ${height}`} className="overflow-visible pointer-events-none">
                 {/* Grid lines */}
                 <line x1={padding} y1={zeroY} x2={width - padding} y2={zeroY}
                     stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
