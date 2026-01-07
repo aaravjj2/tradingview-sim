@@ -35,7 +35,34 @@ export default function Supergraph({
         return prices;
     }, [currentPrice, priceRange]);
 
-    // Calculate payoff at each price point
+    // Black-Scholes Model for Theoretical Pricing
+    const calculateOptionPrice = (
+        type: string,
+        S: number, // Stock Price
+        K: number, // Strike
+        T: number = 30 / 365, // Time to expiration (default 30 days for curve)
+        r: number = 0.05, // Risk-free rate
+        sigma: number = 0.2 // Volatility (IV)
+    ): number => {
+        const d1 = (Math.log(S / K) + (r + sigma * sigma / 2) * T) / (sigma * Math.sqrt(T));
+        const d2 = d1 - sigma * Math.sqrt(T);
+
+        // Standard Normal CDF approximation
+        const cdf = (x: number) => {
+            const t = 1 / (1 + 0.2316419 * Math.abs(x));
+            const d = 0.39894228 * Math.exp(-x * x / 2);
+            const prob = d * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+            return x < 0 ? 1 - prob : prob;
+        };
+
+        if (type === 'call') {
+            return S * cdf(d1) - K * Math.exp(-r * T) * cdf(d2);
+        } else {
+            return K * Math.exp(-r * T) * cdf(-d2) - S * cdf(-d1);
+        }
+    };
+
+    // Calculate payoff at each price point (Theoretical P/L)
     const payoffData = useMemo(() => {
         return pricePoints.map(price => {
             let payoff = 0;
@@ -44,14 +71,23 @@ export default function Supergraph({
                 const sign = leg.position === 'long' ? 1 : -1;
                 const qty = leg.quantity;
 
-                if (leg.option_type === 'call') {
-                    const intrinsic = Math.max(0, price - leg.strike);
-                    payoff += sign * qty * 100 * (intrinsic - leg.premium);
-                } else if (leg.option_type === 'put') {
-                    const intrinsic = Math.max(0, leg.strike - price);
-                    payoff += sign * qty * 100 * (intrinsic - leg.premium);
-                } else if (leg.option_type === 'stock') {
-                    payoff += sign * qty * (price - leg.strike);
+                if (leg.option_type === 'stock') {
+                    payoff += sign * qty * (price - leg.strike); // Stock is linear
+                } else {
+                    // Calculate theoretical price at this spot price
+                    // Using fixed T=30/365 and IV=0.25 for visualization curve
+                    const theoreticalPrice = calculateOptionPrice(
+                        leg.option_type,
+                        price,
+                        leg.strike,
+                        30 / 365,
+                        0.05,
+                        0.25
+                    );
+
+                    // P/L = (Theoretical Value - Entry Cost) * Qty * 100
+                    // Entry cost is leg.premium
+                    payoff += sign * qty * 100 * (theoreticalPrice - leg.premium);
                 }
             });
 
@@ -92,7 +128,7 @@ export default function Supergraph({
         return height - padding - ((payoff - minPayoff) / range) * (height - 2 * padding);
     };
 
-    // Generate path
+    // Generate path (Smooth Curve)
     const pathD = payoffData.map((d, i) => {
         const x = xScale(d.price);
         const y = yScale(d.payoff);
@@ -133,13 +169,13 @@ export default function Supergraph({
                     stroke="rgba(33, 150, 243, 0.5)" strokeWidth="1" strokeDasharray="4" />
 
                 {/* Payoff curve */}
-                <path d={pathD} fill="none" stroke="#FFD700" strokeWidth="3" />
+                <path d={pathD} fill="none" stroke="#00E676" strokeWidth="2" />
 
                 {/* Fill area */}
                 <path
                     d={`${pathD} L ${xScale(pricePoints[pricePoints.length - 1])} ${zeroY} L ${xScale(pricePoints[0])} ${zeroY} Z`}
                     fill="url(#payoffGradient)"
-                    opacity="0.3"
+                    opacity="0.2"
                 />
 
                 {/* Gradient definition */}

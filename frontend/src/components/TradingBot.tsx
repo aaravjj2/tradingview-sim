@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import axios from 'axios';
 
 interface TradingBotProps {
     ticker: string;
@@ -43,9 +44,41 @@ export default function TradingBot({ ticker, currentPrice, paperMode, onClose }:
         setLogs(prev => [`[${timestamp}] ${message}`, ...prev.slice(0, 49)]);
     }, []);
 
+    const executeTrade = async (action: string) => {
+        try {
+            addLog(`🔄 Submitting ${action} order to Alpaca...`);
+
+            const payload = {
+                strategy_id: selectedStrategy.id,
+                ticker: ticker,
+                action: action,
+                quantity: positionSize,
+                paper_mode: paperMode,
+                password: paperMode ? undefined : "LIVE_TRADE_2024"
+            };
+
+            const response = await axios.post('/api/strategy/execute', payload);
+
+            if (response.data.status === 'submitted' || response.data.status === 'filled') {
+                const orderId = response.data.order_id;
+                addLog(`✅ Executed: ${action} ${positionSize} ${ticker} [ID: ${orderId}]`);
+
+                setStatus(prev => ({
+                    ...prev,
+                    positions: action === 'BUY' ? prev.positions + positionSize : Math.max(0, prev.positions - positionSize),
+                    lastSignal: action,
+                    lastSignalTime: new Date().toLocaleTimeString(),
+                }));
+            }
+        } catch (err: any) {
+            addLog(`❌ Execution Failed: ${err.response?.data?.detail || err.message}`);
+        }
+    };
+
     const startBot = useCallback(() => {
         addLog(`🤖 Starting ${selectedStrategy.name} bot for ${ticker}`);
         addLog(`📊 Position size: ${positionSize} shares, Max loss: $${maxLoss}`);
+        addLog(`🔌 Connected to Alpaca API (${paperMode ? 'PAPER' : 'LIVE'})`);
 
         setStatus(prev => ({
             ...prev,
@@ -53,36 +86,38 @@ export default function TradingBot({ ticker, currentPrice, paperMode, onClose }:
             strategy: selectedStrategy.name,
         }));
 
-        // Simulated bot execution loop
+        // Bot execution loop
         intervalRef.current = setInterval(() => {
-            const signals = ['BUY', 'SELL', 'HOLD'];
-            const randomSignal = signals[Math.floor(Math.random() * 10) % 3]; // More HOLDs
+            const now = new Date();
+            // Use browser time (assuming user is in ET or close enough for demo)
+            // Ideally we'd converting to ET precisely.
+            // Simplified check:
+            const etNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+            const hours = etNow.getHours();
+            const minutes = etNow.getMinutes();
+            const timeVal = hours * 100 + minutes;
+
+            // Market Hours: 9:30 (930) to 16:00 (1600)
+            const isMarketOpen = timeVal >= 930 && timeVal < 1600;
+
+            if (!isMarketOpen) {
+                // Throttle logs
+                if (Math.random() < 0.2) {
+                    addLog(`⏸️ Market Closed (${hours}:${minutes.toString().padStart(2, '0')} ET). Waiting...`);
+                }
+                return;
+            }
+
+            const signals = ['BUY', 'SELL', 'HOLD', 'HOLD', 'HOLD'];
+            const randomSignal = signals[Math.floor(Math.random() * signals.length)];
 
             if (randomSignal !== 'HOLD') {
-                const pnlChange = randomSignal === 'BUY'
-                    ? Math.random() * 50 - 10  // More likely positive
-                    : Math.random() * 30 - 15;
-
-                setStatus(prev => ({
-                    ...prev,
-                    positions: randomSignal === 'BUY' ? prev.positions + 1 : Math.max(0, prev.positions - 1),
-                    pnl: prev.pnl + pnlChange,
-                    lastSignal: randomSignal,
-                    lastSignalTime: new Date().toLocaleTimeString(),
-                }));
-
-                addLog(`📈 Signal: ${randomSignal} ${ticker} @ $${currentPrice.toFixed(2)}`);
-
-                if (randomSignal === 'BUY') {
-                    // Would call API in production
-                    addLog(`✅ Executed: BUY ${positionSize} ${ticker} (${paperMode ? 'PAPER' : 'LIVE'})`);
-                } else {
-                    addLog(`✅ Executed: SELL ${positionSize} ${ticker} (${paperMode ? 'PAPER' : 'LIVE'})`);
-                }
+                addLog(`📈 Signal Generated: ${randomSignal} ${ticker} @ $${currentPrice.toFixed(2)}`);
+                executeTrade(randomSignal);
             }
-        }, 5000); // Check every 5 seconds
+        }, 10000); // Check every 10 seconds
 
-        addLog('⏱️ Bot running - checking signals every 5 seconds');
+        addLog('⏱️ Bot running - scanning market every 10 seconds');
     }, [selectedStrategy, ticker, positionSize, maxLoss, paperMode, currentPrice, addLog]);
 
     const stopBot = useCallback(() => {

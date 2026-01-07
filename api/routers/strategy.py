@@ -27,25 +27,49 @@ async def create_strategy(strategy: StrategyCreate):
     )
 
 
+class StrategyExecution(BaseModel):
+    strategy_id: str
+    ticker: str
+    action: str  # BUY or SELL
+    quantity: int
+    paper_mode: bool = True
+    password: Optional[str] = None
+
+
 @router.post("/execute")
 async def execute_strategy(
-    strategy_id: str,
-    paper_mode: bool = True,
-    password: Optional[str] = None
+    execution: StrategyExecution
 ):
-    """Execute a strategy"""
+    """Execute a strategy via Alpaca"""
     # For live mode, require password
-    if not paper_mode:
-        if password != "LIVE_TRADE_2024":  # Simple password protection
+    if not execution.paper_mode:
+        if execution.password != "LIVE_TRADE_2024":
             raise HTTPException(status_code=403, detail="Invalid password for live trading")
     
-    # Execute logic would go here
-    return {
-        "status": "executed" if paper_mode else "live_executed",
-        "strategy_id": strategy_id,
-        "mode": "paper" if paper_mode else "live",
-        "timestamp": datetime.now().isoformat()
-    }
+    # Execute actual trade
+    try:
+        side = "buy" if execution.action.upper() == "BUY" else "sell"
+        order = await alpaca.submit_order(
+            symbol=execution.ticker,
+            qty=execution.quantity,
+            side=side,
+            order_type="market",
+            time_in_force="day"
+        )
+        
+        if "error" in order:
+             raise HTTPException(status_code=400, detail=f"Alpaca Error: {order['error']}")
+
+        return {
+            "status": "filled" if order.get("status") == "filled" else "submitted",
+            "order_id": order.get("id"),
+            "strategy_id": execution.strategy_id,
+            "mode": "paper" if execution.paper_mode else "live",
+            "timestamp": datetime.now().isoformat(),
+            "details": order
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/templates")
