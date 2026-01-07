@@ -12,7 +12,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from routers import market, strategy, backtest, volatility
+from routers import market, strategy, backtest, volatility, analytics
 from services.cache import init_database
 
 @asynccontextmanager
@@ -42,6 +42,7 @@ app.include_router(market.router, prefix="/api/market", tags=["Market Data"])
 app.include_router(strategy.router, prefix="/api/strategy", tags=["Strategy"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["Backtest"])
 app.include_router(volatility.router, prefix="/api/volatility", tags=["Volatility Analysis"])
+app.include_router(analytics.router, tags=["Advanced Analytics"])
 
 
 @app.get("/api/health")

@@ -22,6 +22,13 @@ import AIStrategyRecommender from './components/AIStrategyRecommender';
 import DraggableSupergraph from './components/DraggableSupergraph';
 import HistoricalPayoffReplay from './components/HistoricalPayoffReplay';
 import CommandPalette from './components/CommandPalette';
+// Phase 8-13 Components
+import UncertaintyCone from './components/UncertaintyCone';
+import StrategyNLP from './components/StrategyNLP';
+import StrategyLegos from './components/StrategyLegos';
+import MarginSimulator from './components/MarginSimulator';
+import WhaleAlerts from './components/WhaleAlerts';
+import PanicSimulator from './components/PanicSimulator';
 import { useMarketData, useGreeks, useHeartbeatStatus } from './hooks/useMarketData';
 
 // Demo legs for testing
@@ -390,6 +397,45 @@ function App() {
                   netDelta={greeks.delta * 100}
                   heartbeatStatus={heartbeatStatus}
                 />
+
+                {/* Phase 8: Uncertainty Cone */}
+                <div className="mt-6">
+                  <UncertaintyCone
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                    days={30}
+                  />
+                </div>
+
+                {/* Phase 11: Strategy Builders */}
+                <div className="grid grid-cols-2 gap-6 mt-6">
+                  <StrategyNLP
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                  />
+                  <StrategyLegos
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                  />
+                </div>
+
+                {/* Phase 10 & 13: Margin Simulator & Panic Simulator */}
+                <div className="grid grid-cols-2 gap-6 mt-6">
+                  <MarginSimulator
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                  />
+                  <PanicSimulator
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                    portfolioValue={100000}
+                  />
+                </div>
+
+                {/* Phase 13: Whale Alerts */}
+                <div className="mt-6">
+                  <WhaleAlerts tickers={['SPY', 'QQQ', ticker, 'NVDA', 'TSLA']} />
+                </div>
               </>
             )}
           </>
