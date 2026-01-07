@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import CandleChart from './components/CandleChart';
 import Supergraph from './components/Supergraph';
 import GreeksPanel from './components/GreeksPanel';
@@ -6,6 +6,13 @@ import Backtester from './components/Backtester';
 import TradeJournal from './components/TradeJournal';
 import TradingBot from './components/TradingBot';
 import LiveModeToggle from './components/LiveModeToggle';
+import IVSmile from './components/IVSmile';
+import HVvsIV from './components/HVvsIV';
+import MaxPainIndicator from './components/MaxPainIndicator';
+import MonteCarloChart from './components/MonteCarloChart';
+import KellyCalculator from './components/KellyCalculator';
+import PanicButton from './components/PanicButton';
+import LatencyMonitor from './components/LatencyMonitor';
 import { useMarketData, useGreeks, useHeartbeatStatus } from './hooks/useMarketData';
 
 // Demo legs for testing
@@ -21,8 +28,11 @@ function App() {
   const [showBacktester, setShowBacktester] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
   const [showBot, setShowBot] = useState(false);
+  const [showKelly, setShowKelly] = useState(false);
+  const [showPanic, setShowPanic] = useState(false);
+  const [activeTab, setActiveTab] = useState<'charts' | 'analytics'>('charts');
 
-  const { price, candles, loading, error, lastUpdate, refetch } = useMarketData(ticker);
+  const { price, candles, loading, error, lastUpdate, latency, refreshCount, refetch } = useMarketData(ticker);
   const greeks = useGreeks(ticker, price?.price ?? 500, DEMO_LEGS);
   const heartbeatStatus = useHeartbeatStatus(lastUpdate);
 
@@ -70,7 +80,7 @@ function App() {
             {price && (
               <div className="bg-[#1a1f2e] rounded-lg px-3 py-2 flex items-center gap-2">
                 <span className={`inline-block w-2 h-2 rounded-full ${heartbeatStatus === 'live' ? 'bg-green-500 animate-pulse' :
-                    heartbeatStatus === 'stale' ? 'bg-yellow-500' : 'bg-red-500'
+                  heartbeatStatus === 'stale' ? 'bg-yellow-500' : 'bg-red-500'
                   }`} />
                 <span className="text-white font-mono font-bold text-sm">${price.price.toFixed(2)}</span>
               </div>
@@ -83,6 +93,31 @@ function App() {
               title="Refresh Data"
             >
               🔄
+            </button>
+
+            {/* Tab Toggle */}
+            <div className="flex bg-[#1a1f2e] rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('charts')}
+                className={`px-3 py-1 rounded text-sm ${activeTab === 'charts' ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
+              >
+                📊 Charts
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`px-3 py-1 rounded text-sm ${activeTab === 'analytics' ? 'bg-purple-600 text-white' : 'text-gray-400'}`}
+              >
+                🔬 Analytics
+              </button>
+            </div>
+
+            {/* Kelly Button */}
+            <button
+              onClick={() => setShowKelly(true)}
+              className="bg-[#1a1f2e] border border-white/20 rounded-lg px-3 py-2 text-sm hover:border-yellow-500 transition"
+              title="Kelly Criterion"
+            >
+              🎯 Kelly
             </button>
 
             {/* Bot Button */}
@@ -109,12 +144,31 @@ function App() {
               📓 Journal
             </button>
 
+            {/* Panic Button */}
+            {!paperMode && (
+              <button
+                onClick={() => setShowPanic(true)}
+                className="bg-red-600 hover:bg-red-500 rounded-lg px-3 py-2 text-sm font-bold transition animate-pulse"
+              >
+                🚨 PANIC
+              </button>
+            )}
+
             {/* Paper/Live Toggle */}
             <LiveModeToggle
               paperMode={paperMode}
               onToggle={setPaperMode}
             />
           </div>
+        </div>
+
+        {/* Latency Monitor Bar */}
+        <div className="mt-2 flex justify-end">
+          <LatencyMonitor
+            latency={latency}
+            refreshCount={refreshCount}
+            lastUpdate={lastUpdate}
+          />
         </div>
       </header>
 
@@ -141,63 +195,111 @@ function App() {
           </div>
         ) : (
           <>
-            {/* Chart Grid - Split Layout with Synced Cursors */}
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              {/* Candle Chart */}
-              <CandleChart
-                ticker={ticker}
-                data={candles}
-                breakevens={breakevens}
-                onHover={handleCandleHover}
-                hoveredTimestamp={hoveredTimestamp}
-              />
+            {activeTab === 'charts' ? (
+              <>
+                {/* Charts Tab - Main Layout */}
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                  {/* Candle Chart */}
+                  <CandleChart
+                    ticker={ticker}
+                    data={candles}
+                    breakevens={breakevens}
+                    onHover={handleCandleHover}
+                    hoveredTimestamp={hoveredTimestamp}
+                  />
 
-              {/* Supergraph with cursor sync */}
-              <Supergraph
-                currentPrice={price?.price ?? 500}
-                legs={DEMO_LEGS}
-                hoveredPrice={hoveredPrice}
-              />
-            </div>
+                  {/* Supergraph with cursor sync */}
+                  <Supergraph
+                    currentPrice={price?.price ?? 500}
+                    legs={DEMO_LEGS}
+                    hoveredPrice={hoveredPrice}
+                  />
+                </div>
 
-            {/* Greeks Panel with Heartbeat */}
-            <GreeksPanel
-              delta={greeks.delta}
-              gamma={greeks.gamma}
-              theta={greeks.theta}
-              vega={greeks.vega}
-              netDelta={greeks.delta * 100}
-              heartbeatStatus={heartbeatStatus}
-            />
+                {/* Greeks Panel with Second-Order Greeks */}
+                <GreeksPanel
+                  delta={greeks.delta}
+                  gamma={greeks.gamma}
+                  theta={greeks.theta}
+                  vega={greeks.vega}
+                  vanna={0.0012}
+                  charm={-0.0034}
+                  betaWeightedDelta={greeks.delta * 100 * 1.2}
+                  netDelta={greeks.delta * 100}
+                  heartbeatStatus={heartbeatStatus}
+                />
 
-            {/* Strategy Info */}
-            <div className="mt-6 bg-[#1a1f2e] rounded-xl p-4">
-              <h3 className="text-lg font-semibold mb-3">📋 Strategy: Long Call</h3>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-gray-400 border-b border-white/10">
-                    <th className="text-left py-2">Leg</th>
-                    <th className="text-left py-2">Type</th>
-                    <th className="text-left py-2">Strike</th>
-                    <th className="text-left py-2">Premium</th>
-                    <th className="text-left py-2">Qty</th>
-                    <th className="text-left py-2">Breakeven</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {DEMO_LEGS.map((leg, i) => (
-                    <tr key={i} className="border-b border-white/5">
-                      <td className="py-2">{i + 1}</td>
-                      <td className="py-2 capitalize">{leg.position} {leg.option_type}</td>
-                      <td className="py-2">${leg.strike}</td>
-                      <td className="py-2">${leg.premium.toFixed(2)}</td>
-                      <td className="py-2">{leg.quantity}</td>
-                      <td className="py-2 text-orange-400">${breakevens[i].toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                {/* Strategy Info */}
+                <div className="mt-6 bg-[#1a1f2e] rounded-xl p-4">
+                  <h3 className="text-lg font-semibold mb-3">📋 Strategy: Long Call</h3>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-gray-400 border-b border-white/10">
+                        <th className="text-left py-2">Leg</th>
+                        <th className="text-left py-2">Type</th>
+                        <th className="text-left py-2">Strike</th>
+                        <th className="text-left py-2">Premium</th>
+                        <th className="text-left py-2">Qty</th>
+                        <th className="text-left py-2">Breakeven</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {DEMO_LEGS.map((leg, i) => (
+                        <tr key={i} className="border-b border-white/5">
+                          <td className="py-2">{i + 1}</td>
+                          <td className="py-2 capitalize">{leg.position} {leg.option_type}</td>
+                          <td className="py-2">${leg.strike}</td>
+                          <td className="py-2">${leg.premium.toFixed(2)}</td>
+                          <td className="py-2">{leg.quantity}</td>
+                          <td className="py-2 text-orange-400">${breakevens[i].toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              /* Analytics Tab - New Components */
+              <>
+                <div className="grid grid-cols-3 gap-6 mb-6">
+                  {/* IV Smile */}
+                  <IVSmile ticker={ticker} />
+
+                  {/* HV vs IV */}
+                  <HVvsIV ticker={ticker} />
+
+                  {/* Max Pain */}
+                  <MaxPainIndicator
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                  />
+                </div>
+
+                {/* Monte Carlo Section */}
+                <div className="mb-6">
+                  <MonteCarloChart
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                    iv={DEMO_LEGS[0].iv}
+                    legs={DEMO_LEGS}
+                    daysToExpiry={DEMO_LEGS[0].expiration_days}
+                  />
+                </div>
+
+                {/* Greeks with Advanced Features */}
+                <GreeksPanel
+                  delta={greeks.delta}
+                  gamma={greeks.gamma}
+                  theta={greeks.theta}
+                  vega={greeks.vega}
+                  vanna={0.0012}
+                  charm={-0.0034}
+                  betaWeightedDelta={greeks.delta * 100 * 1.2}
+                  netDelta={greeks.delta * 100}
+                  heartbeatStatus={heartbeatStatus}
+                />
+              </>
+            )}
           </>
         )}
       </main>
@@ -222,8 +324,15 @@ function App() {
           onClose={() => setShowBot(false)}
         />
       )}
+      {showKelly && (
+        <KellyCalculator onClose={() => setShowKelly(false)} />
+      )}
+      {showPanic && (
+        <PanicButton onClose={() => setShowPanic(false)} />
+      )}
     </div>
   );
 }
 
 export default App;
+
