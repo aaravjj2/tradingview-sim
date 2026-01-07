@@ -66,22 +66,40 @@ export function useMarketData(ticker: string, options: MarketDataOptions = {}) {
 
             // Normalize dates to current year (Alpaca free tier returns older data)
             const rawCandles = response.data as CandleData[];
-            if (Array.isArray(rawCandles) && rawCandles.length > 0) {
-                const lastDate = new Date(rawCandles[rawCandles.length - 1].timestamp);
-                const today = new Date();
-                const daysDiff = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
 
-                const normalizedCandles = rawCandles.map((candle: CandleData) => {
-                    const originalDate = new Date(candle.timestamp);
-                    originalDate.setDate(originalDate.getDate() + daysDiff);
-                    return {
-                        ...candle,
-                        timestamp: originalDate.toISOString(),
-                    };
-                });
-                setCandles(normalizedCandles);
+            if (Array.isArray(rawCandles) && rawCandles.length > 0) {
+                // Filter out any candles with missing/invalid timestamps first
+                const validCandles = rawCandles.filter(c => c.timestamp && !isNaN(new Date(c.timestamp).getTime()));
+
+                if (validCandles.length > 0) {
+                    const lastDate = new Date(validCandles[validCandles.length - 1].timestamp);
+                    const today = new Date();
+                    const daysDiff = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                    const normalizedCandles = validCandles.map((candle: CandleData) => {
+                        try {
+                            const originalDate = new Date(candle.timestamp);
+                            if (isNaN(originalDate.getTime())) return null;
+
+                            // Only shift if daysDiff is valid number
+                            if (!isNaN(daysDiff)) {
+                                originalDate.setDate(originalDate.getDate() + daysDiff);
+                            }
+                            return {
+                                ...candle,
+                                timestamp: originalDate.toISOString(),
+                            };
+                        } catch (e) {
+                            console.warn('Skipping invalid candle:', candle, e);
+                            return null;
+                        }
+                    }).filter((c): c is CandleData => c !== null);
+                    setCandles(normalizedCandles);
+                } else {
+                    setCandles([]);
+                }
             } else {
-                setCandles(rawCandles);
+                setCandles([]);
             }
             setError(null);
         } catch (err) {
