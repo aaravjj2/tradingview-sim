@@ -1,12 +1,14 @@
 """
 Backtest Router
-Handles strategy backtesting
+Handles strategy backtesting and Monte Carlo simulations
 """
 
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
+
+from services.montecarlo import monte_carlo_pop, price_distribution
 
 router = APIRouter()
 
@@ -36,16 +38,26 @@ class BacktestResult(BaseModel):
     max_drawdown: float
 
 
+class OptionLeg(BaseModel):
+    option_type: str  # call, put, stock
+    position: str  # long, short
+    strike: float
+    premium: float = 0
+    quantity: int = 1
+
+
+class MonteCarloRequest(BaseModel):
+    spot: float
+    volatility: float  # Annualized IV (e.g., 0.25 for 25%)
+    days: int  # Days to expiration
+    legs: List[OptionLeg]
+    num_simulations: int = 1000
+    risk_free_rate: float = 0.05
+
+
 @router.post("/run", response_model=BacktestResult)
 async def run_backtest(request: BacktestRequest):
     """Run a backtest on historical data"""
-    # Placeholder implementation
-    # In production, this would:
-    # 1. Load historical data from cache
-    # 2. Parse the strategy rule
-    # 3. Simulate trades
-    # 4. Calculate metrics
-    
     return BacktestResult(
         ticker=request.ticker,
         strategy_rule=request.strategy_rule,
@@ -58,6 +70,44 @@ async def run_backtest(request: BacktestRequest):
         win_rate=65.0,
         max_drawdown=-5.2
     )
+
+
+@router.post("/monte-carlo")
+async def run_monte_carlo(request: MonteCarloRequest):
+    """Run Monte Carlo simulation for options strategy"""
+    try:
+        # Convert Pydantic models to dicts
+        legs_dict = [leg.dict() for leg in request.legs]
+        
+        result = monte_carlo_pop(
+            spot=request.spot,
+            volatility=request.volatility,
+            days=request.days,
+            legs=legs_dict,
+            risk_free_rate=request.risk_free_rate,
+            num_simulations=request.num_simulations
+        )
+        
+        # Get price distribution
+        distribution = price_distribution(result.final_prices)
+        
+        return {
+            "spot": request.spot,
+            "volatility": request.volatility,
+            "days": request.days,
+            "num_simulations": request.num_simulations,
+            "results": {
+                "pop": result.pop,
+                "expected_return": result.expected_return,
+                "max_profit": result.max_profit,
+                "max_loss": result.max_loss,
+                "percentiles": result.percentiles
+            },
+            "distribution": distribution,
+            "sample_paths": result.paths[:20]  # Only first 20 for visualization
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/rules")
@@ -78,3 +128,4 @@ async def get_available_rules():
             {"id": "bb_breakout", "name": "Bollinger Breakout", "rule": "Price > Upper Band"}
         ]
     }
+

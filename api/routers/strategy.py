@@ -115,3 +115,48 @@ async def calculate_strategy(strategy: StrategyCreate):
             "vega": 15.00
         }
     }
+
+
+@router.post("/close-all")
+async def close_all_positions():
+    """Emergency close all open positions"""
+    try:
+        # Get all positions
+        positions = await alpaca.get_positions()
+        
+        if not positions or len(positions) == 0:
+            return {"closed_count": 0, "message": "No open positions"}
+        
+        closed = []
+        errors = []
+        
+        for pos in positions:
+            symbol = pos.get("symbol", "")
+            qty = abs(int(float(pos.get("qty", 0))))
+            side = "sell" if float(pos.get("qty", 0)) > 0 else "buy"
+            
+            try:
+                order = await alpaca.submit_order(
+                    symbol=symbol,
+                    qty=qty,
+                    side=side,
+                    order_type="market",
+                    time_in_force="day"
+                )
+                
+                if "error" not in order:
+                    closed.append(symbol)
+                else:
+                    errors.append(f"{symbol}: {order['error']}")
+            except Exception as e:
+                errors.append(f"{symbol}: {str(e)}")
+        
+        return {
+            "closed_count": len(closed),
+            "closed_symbols": closed,
+            "errors": errors,
+            "message": f"Closed {len(closed)} positions"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+

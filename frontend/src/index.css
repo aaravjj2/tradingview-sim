@@ -1,16 +1,36 @@
 @import "tailwindcss";
 
-:root {
+/* Dark Mode (Default) */
+:root,
+.dark-mode {
   --bg-primary: #0f1117;
   --bg-secondary: #1a1f2e;
   --bg-tertiary: #252b3b;
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.4);
+  --border-color: rgba(255, 255, 255, 0.1);
   --accent-green: #00C853;
   --accent-red: #FF1744;
   --accent-blue: #2196F3;
   --accent-purple: #9C27B0;
   --accent-gold: #FFD700;
+}
+
+/* Light Mode */
+.light-mode {
+  --bg-primary: #f5f7fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e8ecf1;
+  --text-primary: #1a1f2e;
+  --text-secondary: rgba(26, 31, 46, 0.7);
+  --text-muted: rgba(26, 31, 46, 0.4);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --accent-green: #00a844;
+  --accent-red: #d32f2f;
+  --accent-blue: #1976d2;
+  --accent-purple: #7b1fa2;
+  --accent-gold: #f9a825;
 }
 
 * {
@@ -24,6 +44,7 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #root {
@@ -47,4 +68,79 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #3a4259;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+
+  /* Stack panels vertically on mobile */
+  .dashboard-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem;
+  }
+
+  /* Full width cards */
+  .dashboard-grid>div {
+    width: 100% !important;
+  }
+
+  /* Smaller text on mobile */
+  h1 {
+    font-size: 1.5rem !important;
+  }
+
+  h2,
+  h3 {
+    font-size: 1rem !important;
+  }
+
+  /* Compact buttons */
+  .mobile-compact button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Hide non-essential items */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Full-width modals */
+  .modal-content {
+    width: 95vw !important;
+    max-height: 90vh !important;
+  }
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* Utility classes */
+.bg-primary {
+  background: var(--bg-primary);
+}
+
+.bg-secondary {
+  background: var(--bg-secondary);
+}
+
+.bg-tertiary {
+  background: var(--bg-tertiary);
+}
+
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.border-themed {
+  border-color: var(--border-color);
 }

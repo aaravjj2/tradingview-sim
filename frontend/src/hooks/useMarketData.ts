@@ -18,21 +18,36 @@ interface PriceData {
     timestamp: string;
 }
 
-export function useMarketData(ticker: string) {
+interface MarketDataOptions {
+    refreshInterval?: number;  // in milliseconds, default 5000
+    autoRefresh?: boolean;     // default true
+}
+
+export function useMarketData(ticker: string, options: MarketDataOptions = {}) {
+    const { refreshInterval = 5000, autoRefresh = true } = options;
+
     const [price, setPrice] = useState<PriceData | null>(null);
     const [candles, setCandles] = useState<CandleData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+    const [latency, setLatency] = useState<number>(0);
+    const [refreshCount, setRefreshCount] = useState(0);
 
-    // Fetch current price
+    // Fetch current price with latency tracking
     const fetchPrice = useCallback(async () => {
+        const startTime = performance.now();
         try {
             const response = await axios.get(`/api/market/price/${ticker}`);
+            const endTime = performance.now();
+
             setPrice(response.data);
             setLastUpdate(new Date());
+            setLatency(Math.round(endTime - startTime));
+            setRefreshCount(prev => prev + 1);
         } catch (err) {
             console.error('Error fetching price:', err);
+            setLatency(-1); // Indicates error
         }
     }, [ticker]);
 
@@ -76,13 +91,25 @@ export function useMarketData(ticker: string) {
         fetchCandles();
     }, [fetchPrice, fetchCandles]);
 
-    // Heartbeat polling (every 5 seconds)
+    // Configurable auto-refresh (heartbeat polling)
     useEffect(() => {
-        const interval = setInterval(fetchPrice, 5000);
-        return () => clearInterval(interval);
-    }, [fetchPrice]);
+        if (!autoRefresh) return;
 
-    return { price, candles, loading, error, lastUpdate, refetch: fetchCandles };
+        const interval = setInterval(fetchPrice, refreshInterval);
+        return () => clearInterval(interval);
+    }, [fetchPrice, refreshInterval, autoRefresh]);
+
+    return {
+        price,
+        candles,
+        loading,
+        error,
+        lastUpdate,
+        latency,
+        refreshCount,
+        refetch: fetchCandles,
+        refreshPrice: fetchPrice
+    };
 }
 
 // Black-Scholes Greeks calculation
