@@ -160,3 +160,79 @@ async def close_all_positions():
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+# =========================
+# AI & Advanced Analytics
+# =========================
+
+@router.get("/recommend/{ticker}")
+async def get_ai_recommendation(
+    ticker: str,
+    current_price: float = 500.0,
+    iv_rank: float = 50.0,
+    days_to_expiry: int = 30,
+    risk_tolerance: str = "moderate"
+):
+    """Get AI strategy recommendation"""
+    from services.strategy_recommender import get_strategy_recommendation
+    
+    return await get_strategy_recommendation(
+        ticker=ticker,
+        current_price=current_price,
+        iv_rank=iv_rank,
+        days_to_expiry=days_to_expiry,
+        risk_tolerance=risk_tolerance
+    )
+
+
+@router.get("/forecast/{ticker}")
+async def forecast_price(
+    ticker: str,
+    current_price: float = 500.0,
+    targets: str = "480,490,510,520",
+    days: int = 30,
+    volatility: float = 0.25
+):
+    """Forecast price with target probabilities"""
+    from services.price_forecast import forecast_price as forecast
+    
+    target_list = [float(t.strip()) for t in targets.split(",")]
+    return await forecast(ticker, current_price, target_list, days, volatility)
+
+
+@router.get("/correlation")
+async def analyze_correlations(
+    tickers: str = "SPY,QQQ,IWM,GLD,TLT",
+    lookback: int = 60
+):
+    """Get correlation matrix"""
+    from services.correlation_matrix import analyze_correlations as analyze
+    
+    ticker_list = [t.strip() for t in tickers.split(",")]
+    return await analyze(ticker_list, lookback)
+
+
+@router.get("/drawdown")
+async def analyze_drawdown(
+    annual_return: float = 0.15,
+    annual_volatility: float = 0.20,
+    days: int = 252,
+    simulations: int = 10000
+):
+    """Monte Carlo drawdown analysis"""
+    from services.drawdown_analysis import run_drawdown_analysis
+    
+    return await run_drawdown_analysis(
+        annual_return=annual_return,
+        annual_volatility=annual_volatility,
+        days=days,
+        num_simulations=simulations
+    )
+
+
+@router.get("/dispersion/{index}")
+async def scan_dispersion(index: str = "SPY"):
+    """Scan for dispersion trading opportunities"""
+    from services.dispersion_scanner import scan_dispersion
+    
+    return await scan_dispersion(index)

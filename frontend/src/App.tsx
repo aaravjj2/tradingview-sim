@@ -18,6 +18,9 @@ import OpenInterestOverlay from './components/OpenInterestOverlay';
 import GEXProfile from './components/GEXProfile';
 import StrategyComparison from './components/StrategyComparison';
 import IVRVCone from './components/IVRVCone';
+import AIStrategyRecommender from './components/AIStrategyRecommender';
+import DraggableSupergraph from './components/DraggableSupergraph';
+import HistoricalPayoffReplay from './components/HistoricalPayoffReplay';
 import { useMarketData, useGreeks, useHeartbeatStatus } from './hooks/useMarketData';
 
 // Demo legs for testing
@@ -320,6 +323,27 @@ function App() {
                   <GEXProfile
                     ticker={ticker}
                     currentPrice={price?.price ?? 500}
+                  />
+                </div>
+
+                {/* AI Strategy Recommender */}
+                <div className="mb-6">
+                  <AIStrategyRecommender
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                  />
+                </div>
+
+                {/* Draggable Strategy & Historical Replay */}
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                  <DraggableSupergraph
+                    currentPrice={price?.price ?? 500}
+                    legs={DEMO_LEGS as any}
+                  />
+                  <HistoricalPayoffReplay
+                    ticker={ticker}
+                    currentPrice={price?.price ?? 500}
+                    legs={DEMO_LEGS as any}
                   />
                 </div>
 
