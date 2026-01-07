@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import CandleChart from './components/CandleChart';
 import Supergraph from './components/Supergraph';
 import GreeksPanel from './components/GreeksPanel';
@@ -13,6 +13,7 @@ import MonteCarloChart from './components/MonteCarloChart';
 import KellyCalculator from './components/KellyCalculator';
 import PanicButton from './components/PanicButton';
 import LatencyMonitor from './components/LatencyMonitor';
+import QuickStart from './components/QuickStart';
 import { useMarketData, useGreeks, useHeartbeatStatus } from './hooks/useMarketData';
 
 // Demo legs for testing
@@ -31,6 +32,14 @@ function App() {
   const [showKelly, setShowKelly] = useState(false);
   const [showPanic, setShowPanic] = useState(false);
   const [activeTab, setActiveTab] = useState<'charts' | 'analytics'>('charts');
+  const [showQuickStart, setShowQuickStart] = useState(() => {
+    return localStorage.getItem('supergraph-quickstart-dismissed') !== 'true';
+  });
+
+  const dismissQuickStart = () => {
+    setShowQuickStart(false);
+    localStorage.setItem('supergraph-quickstart-dismissed', 'true');
+  };
 
   const { price, candles, loading, error, lastUpdate, latency, refreshCount, refetch } = useMarketData(ticker);
   const greeks = useGreeks(ticker, price?.price ?? 500, DEMO_LEGS);
@@ -185,13 +194,29 @@ function App() {
           </div>
         )}
 
+        {/* Quick Start Guide for new users */}
+        {showQuickStart && (
+          <QuickStart onDismiss={dismissQuickStart} />
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center h-96">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-400">Loading market data...</p>
+            </div>
           </div>
         ) : error ? (
-          <div className="bg-red-900/50 border border-red-500 rounded-lg p-4 text-center">
-            {error}
+          <div className="bg-red-900/50 border border-red-500 rounded-lg p-6 text-center">
+            <span className="text-3xl mb-2 block">⚠️</span>
+            <p className="font-semibold text-red-300">Failed to Load Data</p>
+            <p className="text-sm text-red-200/70 mt-2">{error}</p>
+            <button
+              onClick={() => refetch()}
+              className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm"
+            >
+              🔄 Retry
+            </button>
           </div>
         ) : (
           <>
