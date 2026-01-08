@@ -1,37 +1,36 @@
 # Capital Readiness Decision
 
-> **Verdict**: ❌ NO-GO
-> **Generated**: 2026-01-08T00:12:55.555391
+> **Verdict**: ⚠️ CONDITIONAL
+> **Generated**: 2026-01-08T00:46:10.068423
 
 ---
 
 ## Executive Summary
 
-Capital deployment NOT AUTHORIZED. Confidence score: 72%. Blocking risks identified: 3. The strategy has not demonstrated sufficient robustness under stress testing.
+Capital deployment CONDITIONALLY authorized with restrictions. Confidence score: 97%. The strategy shows promise but requires additional observation and has 1 conditions to address.
 
 ## Decision Details
 
 | Metric | Value |
 |--------|-------|
-| Verdict | **NO-GO** |
-| Max Capital Allowed | $0 |
-| Required Observation Days | 90 |
-| Confidence Score | 72% |
+| Verdict | **CONDITIONAL** |
+| Max Capital Allowed | $25,000 |
+| Required Observation Days | 60 |
+| Confidence Score | 97% |
 
-## 🚫 Blocking Risks
+## ⚠️ Conditional Requirements
 
-The following issues MUST be resolved before capital deployment:
+The following conditions apply to any capital deployment:
 
-- Behavioral audit pass rate 0.0% below threshold 90.0%
-- Check 'reasonable_time_in_market' failed 100% of audits
-- Only 1 days of paper trading, minimum 7 required
+- Only 10 days of paper trading, recommend 14+
 
 ## Recommendations
 
-1. DO NOT deploy capital at this time
-2. Review and address all blocking risks
-3. Re-run falsification framework after fixes
-4. Consider fundamental strategy review if issues persist
+1. Address all conditional requirements before deployment
+2. Begin with 25% of maximum authorized capital
+3. Extend observation period if any issues arise
+4. Daily monitoring required
+5. Hard stop at 15% drawdown
 
 ---
 
