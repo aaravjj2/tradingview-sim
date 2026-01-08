@@ -1,0 +1,14 @@
+{
+  "verdict": "NO-GO",
+  "max_capital_allowed": 0,
+  "required_observation_days": 90,
+  "blocking_risks": [
+    "Behavioral audit pass rate 0.0% below threshold 90.0%",
+    "Check 'reasonable_time_in_market' failed 100% of audits",
+    "Only 1 days of paper trading, minimum 7 required"
+  ],
+  "conditional_requirements": [],
+  "confidence_score": 0.7166666666666667,
+  "rationale": "Capital deployment NOT AUTHORIZED. Confidence score: 72%. Blocking risks identified: 3. The strategy has not demonstrated sufficient robustness under stress testing.",
+  "timestamp": "2026-01-08T00:12:55.555391"
+}
