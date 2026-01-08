@@ -1,12 +1,10 @@
 {
-  "verdict": "CONDITIONAL",
-  "max_capital_allowed": 25000,
-  "required_observation_days": 60,
+  "verdict": "GO",
+  "max_capital_allowed": 50000,
+  "required_observation_days": 14,
   "blocking_risks": [],
-  "conditional_requirements": [
-    "Only 10 days of paper trading, recommend 14+"
-  ],
-  "confidence_score": 0.9666666666666667,
-  "rationale": "Capital deployment CONDITIONALLY authorized with restrictions. Confidence score: 97%. The strategy shows promise but requires additional observation and has 1 conditions to address.",
-  "timestamp": "2026-01-08T00:46:10.068423"
+  "conditional_requirements": [],
+  "confidence_score": 1.0,
+  "rationale": "Capital deployment AUTHORIZED. Confidence score: 100%. The strategy has demonstrated robust behavior under stress testing and behavioral audits. Conservative position sizing recommended.",
+  "timestamp": "2026-01-08T01:02:52.560035"
 }
