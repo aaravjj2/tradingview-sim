@@ -10,61 +10,86 @@ The **Supergraph Pro (Manager's Suite)** is the advanced, production-grade inter
 
 ---
 
-## 1. Core Interface & Layout
+## 1. Core Architecture
 
-The dashboard is built on a **React Grid Layout**, allowing for modular, draggable, and resizable panels.
+The dashboard is built on a high-performance **React Grid Layout** powered by a **FastAPI** backend.
 
--   **Top Deck (Market Context)**:
-    -   **TradingView Chart**: Full-featured candlestick chart with drawing tools and indicators.
-    -   **P/L Visualizer**: Interactive payoff diagram for the active portfolio.
--   **Middle Deck (Analytics)**:
-    -   **Position Greeks**: Real-time aggregation of portfolio risk.
-    -   **Strategy Comparison**: Side-by-side backtest/simulation of competing strategies.
-    -   **Volatility Cone**: IV vs Realized Volatility analysis.
--   **Bottom Deck (Execution)**:
-    -   **Active Legs**: Detailed breakdown of current positions.
-    -   **Trade Journal**: Integrated logging of trading decisions.
+-   **Frontend State**: Real-time sync via React Query and WebSockets.
+-   **Backend Engine**: Python-based pricing engine (Black-Scholes) serving data to the UI.
+-   **Layout**: Fully modular; panels can be dragged, resized, or hidden via the *Context Sidebar*.
 
 ---
 
 ## 2. Advanced Analytics Engines
 
-### Position Greeks (Real-Time)
-Aggregates risk across all active simulated positions:
--   **Beta-Weighted Delta**: Portfolio directional exposure standardized to SPY.
--   **Gamma**: Curvature risk (acceleration of Delta).
--   **Theta**: Daily time decay collection.
--   **Vega**: Sensitivity to volatility expansion/contraction.
+### A. The Supergraph (Payoff Visualizer)
+The heart of the dashboard (`Supergraph.tsx`). It renders interactive P/L diagrams with institutional tools:
+-   **Theoretical Pricing**: Uses Black-Scholes ($d_1, d_2$) to calculate option prices at any spot price point.
+-   **Ghost Curves**: Allows locking a "baseline" curve to compare "What-If" scenarios (e.g., *What if IV drops 10%?*).
+-   **Breakeven Scanner**: Automatically solves for $P/L = 0$ roots to display exact breakeven prices.
+-   **Time Value Fill**: Visualizes the theta component (extrinsic value) as a shaded region between the T+0 and T+Exp curves.
 
-### Strategy Comparison Tool
-A "Sandbox" environment to pit two strategies against each other (e.g., *Iron Condor* vs. *Straddle*).
--   **Visual Comparison**: Overlaid payoff diagrams.
--   **Metric Diff**: Direct comparison of Max Profit, Max Loss, and Breakeven width.
+### B. Strategy Comparison Sandbox
+A dedicated environment (`StrategyComparison.tsx`) for pitting strategies against each other.
+-   **Use Case**: deciding between an *Iron Condor* (neutral, defined risk) vs. a *Straddle* (neutral, undefined risk).
+-   **Visual Diff**: Overlays two payoff curves on the same axes.
+-   **Metric Diff**: Automatically calculates and compares:
+    -   **Max Profit/Loss**
+    -   **Breakeven Width** (which strategy needs a larger move to lose?)
+    -   **Probability of Profit (POP)**
 
-### Volatility Analysis (IV vs RV Cone)
-A dedicated module for regime detection:
--   **Cone Visualization**: Plots Implied Volatility (IV) against Realized Volatility (RV) cones (10th-90th percentile).
+### C. Volatility Analysis (IV vs RV Cone)
+A regime detection module (`IVRVCone.tsx`) critical for the VolGate strategy.
+-   **Term Structure**: Visualizes IV across multiple timeframes (7, 14, 30, 60, 90 days).
+-   **Cone Logic**: Plots 1$\sigma$ and 2$\sigma$ cones based on Realized Volatility (RV).
 -   **Signal Generation**:
-    -   **"Options Expensive"**: When IV > 90th percentile RV (Sell Premium).
-    -   **"Options Cheap"**: When IV < 10th percentile RV (Buy Premium).
+    -   **"Options Expensive"** (Sell Premium): Triggered when Current IV > 90th percentile RV.
+    -   **"Options Cheap"** (Buy Premium): Triggered when Current IV < 10th percentile RV.
+-   **Calculated Premium**: Displays the *IV Premium* spread ($IV / RV - 1$) in real-time.
 
 ---
 
-## 3. AutoPilot & Journaling
+## 3. Position Risk Management (Greeks)
 
-This dashboard integrates directly with the AI-driven components:
+The **Context Sidebar** and **Greeks Panel** provide granular risk control.
 
--   **AutoPilot Control**: Toggle algorithmic execution (e.g., "VolGate" logic) on/off directly from the UI.
--   **Trade Journal**:
-    -   Automatically logs all trades (Paper/Live).
-    -   Allows manual annotation of "Why" (e.g., "Faded the news").
-    -   Tags trades by Regime (e.g., "High Volatility", "Trending").
+### Position Greeks (Real-Time)
+Aggregates risk across the entire active portfolio:
+-   **Beta-Weighted Delta ($\beta\Delta$)**: Portfolio directional exposure standardized to SPY. 
+    -   *Formula*: $\sum (Position \Delta \times \frac{Price_{Asset}}{Price_{SPY}} \times \beta_{Asset})$
+-   **Gamma ($\Gamma$)**: Curvature risk; how fast your Delta changes.
+-   **Theta ($\Theta$)**: Daily time decay collection (your "rent" collection).
+-   **Vega ($\nu$)**: Sensitivity to volatility expansion/contraction.
+
+### Configuration Controls (`ContextSidebar.tsx`)
+-   **Chart Overlays**: Toggle SMA (5-200), EMA, Bollinger Bands, RSI, MACD.
+-   **Supergraph Simulation**:
+    -   **IV Adjustment**: Slider to shock Implied Volatility (-50% to +50%) across all legs.
+    -   **Day Step**: Time-travel slider to simulate P/L at T+7, T+14, etc.
 
 ---
 
-## 4. Technical Stack
+## 4. Execution & Automation
 
--   **Frontend**: React, Vite, Plotly.js, Lightweight Charts.
--   **Backend**: FastAPI (Python), Uvicorn.
--   **Data**: Live market feed via backend WebSocket bridge.
--   **State**: Real-time sync between UI and backend `Strategy` objects.
+### AutoPilot Integration
+Direct control over the algorithmic execution engine:
+-   **Toggle**: Enable/Disable the `VolGate` algo directly from the UI header.
+-   **Status**: Visual indicator of the active regime (*Trending*, *Choppy*, *Panic*).
+
+### Trade Journal
+An integrated logging system (`TradeJournal.tsx`) for compliance and review:
+-   **Auto-Logging**: All paper/live fills are automatically captured.
+-   **Manual Annotation**: Add notes on *Why* a trade was taken (e.g., "Faded CPI print").
+-   **Tagging**: tagging trades by Regime or Strategy Type for performance attribution.
+
+---
+
+## 5. Technical Components Stack
+
+| Component | Library | Purpose |
+|-----------|---------|---------|
+| **Charts** | `react-plotly.js` | Interactive scientific plotting (Supergraph, Vol Cone) |
+| **Candles** | `lightweight-charts` | High-performance canvas rendering for price history |
+| **Grid** | `react-grid-layout` | Draggable/Resizable dashboard windows |
+| **State** | React Query | Server state management (polling/caching) |
+| **Styling** | Tailwind CSS | Utility-first "Premium Dark" theme |
