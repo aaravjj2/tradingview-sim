@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-08T01:00:58.974725",
+  "reason": "manual",
+  "details": "Test",
+  "positions_closed": [
+    {
+      "symbol": "SPY",
+      "shares": 10,
+      "close_price": 590,
+      "pnl": -15
+    }
+  ],
+  "orders_cancelled": [
+    {
+      "order_id": "TEST-001",
+      "symbol": "SPY",
+      "status": "cancelled"
+    }
+  ],
+  "final_pnl": -15.0,
+  "operator": "pytest"
+}
