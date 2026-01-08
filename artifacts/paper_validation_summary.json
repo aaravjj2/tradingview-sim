@@ -1,0 +1,22 @@
+{
+  "days_validated": 10,
+  "trade_plans_created": 10,
+  "orders_placed": 10,
+  "fills_simulated": 10,
+  "reconciliation_passed": true,
+  "slippage_samples": [
+    9.362304074664657,
+    6.582775823556116,
+    13.032341402162093,
+    0.9453011925382331,
+    8.526208904651789,
+    5.975888037362939,
+    1.1889099668639735,
+    5.754811480568314,
+    3.2353421242534903,
+    7.322014665771329
+  ],
+  "kill_switch_drills": 3,
+  "incidents": [],
+  "avg_slippage_bps": 6.192589767239293
+}

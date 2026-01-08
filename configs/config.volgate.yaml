@@ -21,6 +21,20 @@ abstention:
   volatility_threshold_high: 0.25  # Reduce exposure above this vol
   volatility_threshold_low: 0.10   # Increase exposure below this vol
   
+# Behavioral logic - Hysteresis, Cooldown, Phased Re-entry
+behavioral:
+  N_exit_confirm: 3           # Consecutive days required to confirm exit
+  M_reentry_confirm: 2        # Consecutive days required to confirm re-entry
+  cooldown_days: 5            # Days to wait after exit before re-entry allowed
+  rolling_conf_window: 10     # Window for rolling confidence average
+  phased_reentry_steps:       # Exposure ramp during phased re-entry
+    - 0.25
+    - 0.50
+    - 1.00
+  enable_hysteresis: true     # Enable signal confirmation logic
+  enable_cooldown: true       # Enable post-exit cooldown
+  enable_phased_reentry: true # Enable gradual exposure ramp
+  
 # Slippage model parameters
 slippage:
   base_bps: 5  # Base slippage in basis points
@@ -43,6 +57,8 @@ symbols:
     - "SPY"
     - "QQQ"
     - "IWM"
+    - "GLD"
+    - "TLT"
     
 # Database settings
 database:
@@ -57,3 +73,4 @@ logging:
 replay:
   output_dir: "./replay_output"
   save_actions: true
+

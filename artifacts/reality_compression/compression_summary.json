@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-08T00:12:35.750804",
+  "timestamp": "2026-01-08T00:40:37.999921",
   "config": {
     "delay_range": [
       0,
@@ -19,30 +19,30 @@
     "SPY": {
       "total_simulations": 100,
       "survival_rate": 100.0,
-      "avg_max_dd_pct": 5.464838442463646,
-      "max_max_dd_pct": 11.171667424234842,
-      "avg_pnl": 1031.8572409855797,
-      "median_pnl": 159.38329485729628,
-      "avg_exit_latency_bars": 1.14,
+      "avg_max_dd_pct": 5.500991715264628,
+      "max_max_dd_pct": 12.34647827787157,
+      "avg_pnl": 719.3000900098402,
+      "median_pnl": 188.07783290877705,
+      "avg_exit_latency_bars": 0.94,
       "max_exit_latency_bars": 2
     },
     "GLD": {
       "total_simulations": 100,
       "survival_rate": 100.0,
-      "avg_max_dd_pct": 5.404116560475351,
-      "max_max_dd_pct": 10.506415987863821,
-      "avg_pnl": 1373.461468023884,
-      "median_pnl": 543.722158158278,
-      "avg_exit_latency_bars": 0.97,
+      "avg_max_dd_pct": 5.426070808933214,
+      "max_max_dd_pct": 13.820027288921166,
+      "avg_pnl": 1365.6848235620348,
+      "median_pnl": 888.2128447632567,
+      "avg_exit_latency_bars": 1.13,
       "max_exit_latency_bars": 2
     },
     "TLT": {
       "total_simulations": 100,
       "survival_rate": 100.0,
-      "avg_max_dd_pct": 5.568545233256811,
-      "max_max_dd_pct": 14.70625901367218,
-      "avg_pnl": 1437.5385710691285,
-      "median_pnl": 966.5603370333047,
+      "avg_max_dd_pct": 5.462570893900058,
+      "max_max_dd_pct": 12.742346930961848,
+      "avg_pnl": 1868.1787128279327,
+      "median_pnl": 1453.4731123357851,
       "avg_exit_latency_bars": 0.83,
       "max_exit_latency_bars": 2
     }
@@ -50,9 +50,9 @@
   "overall": {
     "total_simulations": 300,
     "survival_rate": 100.0,
-    "avg_max_dd_pct": 5.479166745398603,
-    "p95_max_dd_pct": 9.502735427390176,
-    "avg_exit_latency_bars": 0.98,
+    "avg_max_dd_pct": 5.463211139365965,
+    "p95_max_dd_pct": 9.869862354087784,
+    "avg_exit_latency_bars": 0.9666666666666667,
     "exit_latency_p95": 2.0,
     "acceptance_criteria": {
       "survival_rate_target": 95.0,
