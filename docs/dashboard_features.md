@@ -3,6 +3,8 @@
 > **Application**: `main.py` (Phase 2)
 > **Status**: Active / Paper Trading Ready
 
+![Options Supergraph Pro Dashboard](/home/aarav/Tradingview/supergraph-pro/docs/assets/dashboard_overview.png)
+
 The **Options Supergraph Pro** is a professional-grade options strategy visualizer and trading simulator designed for rapid prototyping and risk analysis. It features a modern, split-panel dark mode interface optimized for analyzing complex multi-leg options strategies.
 
 ---
