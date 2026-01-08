@@ -29,6 +29,11 @@ import StrategyLegos from './components/StrategyLegos';
 import MarginSimulator from './components/MarginSimulator';
 import WhaleAlerts from './components/WhaleAlerts';
 import PanicSimulator from './components/PanicSimulator';
+// Phase 16-18: Manager's Suite Components
+import ActivityFeed from './components/ActivityFeed';
+import Dashboard from './components/Dashboard';
+import StrategyCards from './components/StrategyCards';
+import VolSurface3D from './components/VolSurface3D';
 import { useMarketData, useGreeks, useHeartbeatStatus } from './hooks/useMarketData';
 
 // Demo legs for testing
@@ -49,6 +54,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'charts' | 'analytics'>('charts');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [analyticsTab, setAnalyticsTab] = useState<'market_intel' | 'strategy_lab' | 'risk_sim'>('market_intel');
   const [showQuickStart, setShowQuickStart] = useState(() => {
     return localStorage.getItem('supergraph-quickstart-dismissed') !== 'true';
   });
@@ -326,117 +332,108 @@ function App() {
               </>
             ) : (
               /* Analytics Tab - New Components */
-              <>
-                <div className="grid grid-cols-3 gap-6 mb-6">
-                  {/* IV Smile */}
-                  <IVSmile ticker={ticker} />
-
-                  {/* HV vs IV */}
-                  <HVvsIV ticker={ticker} />
-
-                  {/* Max Pain */}
-                  <MaxPainIndicator
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                  />
+              <div className="flex flex-col h-full">
+                {/* Analytics Sub-Tabs */}
+                <div className="flex space-x-1 bg-[#0f1117] p-1 rounded-lg mb-4 w-fit">
+                  {(['market_intel', 'strategy_lab', 'risk_sim'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setAnalyticsTab(tab)}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${analyticsTab === tab
+                        ? 'bg-[#2a2e39] text-white shadow-sm'
+                        : 'text-gray-400 hover:text-white hover:bg-[#1a1f2e]'
+                        }`}
+                    >
+                      {tab === 'market_intel' && '📊 Market Intel'}
+                      {tab === 'strategy_lab' && '🧪 Strategy Lab'}
+                      {tab === 'risk_sim' && '⚡ Risk & Sim'}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Open Interest & GEX Section */}
-                <div className="grid grid-cols-2 gap-6 mb-6">
-                  <OpenInterestOverlay
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                  />
-                  <GEXProfile
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                  />
-                </div>
+                {/* Market Intel Tab */}
+                {analyticsTab === 'market_intel' && (
+                  <>
+                    <div className="grid grid-cols-3 gap-6 mb-6">
+                      <IVSmile ticker={ticker} />
+                      <HVvsIV ticker={ticker} />
+                      <MaxPainIndicator ticker={ticker} currentPrice={price?.price ?? 500} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                      <OpenInterestOverlay ticker={ticker} currentPrice={price?.price ?? 500} />
+                      <GEXProfile ticker={ticker} currentPrice={price?.price ?? 500} />
+                    </div>
+                    <div className="mt-6">
+                      <WhaleAlerts tickers={['SPY', 'QQQ', ticker, 'NVDA', 'TSLA']} />
+                    </div>
+                    {/* Glass Cockpit Dashboard */}
+                    <div className="mt-6">
+                      <Dashboard ticker={ticker} />
+                    </div>
+                    {/* AutoPilot Activity Feed */}
+                    <div className="mt-6">
+                      <ActivityFeed />
+                    </div>
+                  </>
+                )}
 
-                {/* AI Strategy Recommender */}
-                <div className="mb-6">
-                  <AIStrategyRecommender
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                  />
-                </div>
+                {/* Strategy Lab Tab */}
+                {analyticsTab === 'strategy_lab' && (
+                  <>
+                    <div className="mb-6">
+                      <AIStrategyRecommender ticker={ticker} currentPrice={price?.price ?? 500} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                      <DraggableSupergraph currentPrice={price?.price ?? 500} legs={DEMO_LEGS as any} />
+                      <HistoricalPayoffReplay ticker={ticker} currentPrice={price?.price ?? 500} legs={DEMO_LEGS as any} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6 mt-6">
+                      <StrategyNLP ticker={ticker} currentPrice={price?.price ?? 500} />
+                      <StrategyLegos ticker={ticker} currentPrice={price?.price ?? 500} />
+                    </div>
+                  </>
+                )}
 
-                {/* Draggable Strategy & Historical Replay */}
-                <div className="grid grid-cols-2 gap-6 mb-6">
-                  <DraggableSupergraph
-                    currentPrice={price?.price ?? 500}
-                    legs={DEMO_LEGS as any}
-                  />
-                  <HistoricalPayoffReplay
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                    legs={DEMO_LEGS as any}
-                  />
-                </div>
-
-                {/* Monte Carlo Section */}
-                <div className="mb-6">
-                  <MonteCarloChart
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                    iv={DEMO_LEGS[0].iv}
-                    legs={DEMO_LEGS}
-                    daysToExpiry={DEMO_LEGS[0].expiration_days}
-                  />
-                </div>
-
-                {/* Greeks with Advanced Features */}
-                <GreeksPanel
-                  delta={greeks.delta}
-                  gamma={greeks.gamma}
-                  theta={greeks.theta}
-                  vega={greeks.vega}
-                  vanna={0.0012}
-                  charm={-0.0034}
-                  betaWeightedDelta={greeks.delta * 100 * 1.2}
-                  netDelta={greeks.delta * 100}
-                  heartbeatStatus={heartbeatStatus}
-                />
-
-                {/* Phase 8: Uncertainty Cone */}
-                <div className="mt-6">
-                  <UncertaintyCone
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                    days={30}
-                  />
-                </div>
-
-                {/* Phase 11: Strategy Builders */}
-                <div className="grid grid-cols-2 gap-6 mt-6">
-                  <StrategyNLP
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                  />
-                  <StrategyLegos
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                  />
-                </div>
-
-                {/* Phase 10 & 13: Margin Simulator & Panic Simulator */}
-                <div className="grid grid-cols-2 gap-6 mt-6">
-                  <MarginSimulator
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                  />
-                  <PanicSimulator
-                    ticker={ticker}
-                    currentPrice={price?.price ?? 500}
-                    portfolioValue={100000}
-                  />
-                </div>
-
-                {/* Phase 13: Whale Alerts */}
-                <div className="mt-6">
-                  <WhaleAlerts tickers={['SPY', 'QQQ', ticker, 'NVDA', 'TSLA']} />
-                </div>
-              </>
+                {/* Risk & Sim Tab */}
+                {analyticsTab === 'risk_sim' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                      <UncertaintyCone ticker={ticker} currentPrice={price?.price ?? 500} days={30} />
+                      <MonteCarloChart
+                        ticker={ticker}
+                        currentPrice={price?.price ?? 500}
+                        iv={DEMO_LEGS[0].iv}
+                        legs={DEMO_LEGS}
+                        daysToExpiry={DEMO_LEGS[0].expiration_days}
+                      />
+                    </div>
+                    <div className="mb-6">
+                      <GreeksPanel
+                        delta={greeks.delta}
+                        gamma={greeks.gamma}
+                        theta={greeks.theta}
+                        vega={greeks.vega}
+                        vanna={0.0012}
+                        charm={-0.0034}
+                        betaWeightedDelta={greeks.delta * 100 * 1.2}
+                        netDelta={greeks.delta * 100}
+                        heartbeatStatus={heartbeatStatus}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6 mt-6">
+                      <MarginSimulator ticker={ticker} currentPrice={price?.price ?? 500} />
+                      <PanicSimulator currentPrice={price?.price ?? 500} portfolioValue={100000} />
+                    </div>
+                    {/* Phase 17-19 Components */}
+                    <div className="mt-6">
+                      <StrategyCards />
+                    </div>
+                    <div className="mt-6">
+                      <VolSurface3D ticker={ticker} currentPrice={price?.price ?? 540} />
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </>
         )}

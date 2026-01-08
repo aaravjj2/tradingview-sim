@@ -4,6 +4,7 @@ RSI-based entry timing for multi-leg strategies
 """
 
 import numpy as np
+import asyncio
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from dataclasses import dataclass
@@ -297,5 +298,4 @@ class SmartLegger:
         }
 
 
-# Need asyncio for the execution loop
-import asyncio
+# End of file

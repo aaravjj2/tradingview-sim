@@ -12,19 +12,21 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from routers import market, strategy, backtest, volatility, analytics
+from routers import market, strategy, backtest, volatility, analytics, autopilot, journal
 from services.cache import init_database
+from services.cache_service import init_cache
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize resources on startup"""
     await init_database()
+    await init_cache()  # Initialize Redis cache
     yield
 
 app = FastAPI(
     title="Supergraph Pro API",
     description="Professional Options Trading Dashboard Backend",
-    version="2.0.0",
+    version="3.0.0",  # Manager's Suite
     lifespan=lifespan
 )
 
@@ -43,6 +45,8 @@ app.include_router(strategy.router, prefix="/api/strategy", tags=["Strategy"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["Backtest"])
 app.include_router(volatility.router, prefix="/api/volatility", tags=["Volatility Analysis"])
 app.include_router(analytics.router, tags=["Advanced Analytics"])
+app.include_router(autopilot.router, tags=["AutoPilot"])
+app.include_router(journal.router, tags=["Trade Journal"])
 
 
 @app.get("/api/health")

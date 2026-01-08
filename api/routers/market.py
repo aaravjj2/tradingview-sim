@@ -108,14 +108,37 @@ async def get_implied_volatility(ticker: str):
 
 @router.get("/oi/{ticker}")
 async def get_open_interest(ticker: str):
-    """Get Open Interest profile for gamma pin analysis"""
+    """Get Open Interest profile for gamma pin analysis with caching."""
     from services.open_interest import get_open_interest_profile
+    from services.cache_service import get_cache
     
-    price_data = await alpaca.get_current_price(ticker)
-    if not price_data:
-        raise HTTPException(status_code=404, detail="Could not fetch price")
-    
-    return await get_open_interest_profile(ticker, price_data["price"])
+    try:
+        # Get current price
+        price_data = await alpaca.get_current_price(ticker)
+        if not price_data:
+            raise HTTPException(status_code=404, detail="Could not fetch price")
+        
+        current_price = price_data["price"]
+        
+        # Try cache first
+        cache = await get_cache()
+        cache_key = cache.make_key("oi", ticker, int(current_price))
+        cached = await cache.get(cache_key)
+        
+        if cached:
+            return cached
+        
+        # Compute OI profile
+        result = await get_open_interest_profile(ticker, current_price)
+        
+        # Cache result
+        await cache.set(cache_key, result, cache.ttl["oi"])
+        
+        return result
+        
+    except Exception as e:
+        print(f"[OI] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/gex/{ticker}")

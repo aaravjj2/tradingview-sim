@@ -38,12 +38,16 @@ async def get_ensemble_forecast(
     """
     Get hybrid ensemble forecast (Monte Carlo + GARCH + Trend)
     """
+    import asyncio
+    
     # Generate mock historical prices for demo
     import numpy as np
     historical = [current_price * (1 + np.random.uniform(-0.02, 0.02)) for _ in range(60)]
     historical.append(current_price)
     
-    result = forecaster.forecast(
+    # Run in thread pool to avoid blocking event loop
+    result = await asyncio.to_thread(
+        forecaster.forecast,
         current_price=current_price,
         historical_prices=historical,
         days=days,
@@ -61,10 +65,12 @@ async def get_probability_above(
     days: int = Query(30)
 ):
     """Calculate probability of price exceeding target"""
+    import asyncio
     import numpy as np
     historical = [current_price * (1 + np.random.uniform(-0.02, 0.02)) for _ in range(60)]
     
-    prob = forecaster.probability_above(
+    prob = await asyncio.to_thread(
+        forecaster.probability_above,
         current_price=current_price,
         target_price=target_price,
         historical_prices=historical,
@@ -252,7 +258,7 @@ class MockAlpaca:
 
 bot_instance = ThetaEaterBot(MockAlpaca())
 
-@router.get("/bot/status")
+@router.get("/analytics/bot/status")
 async def get_bot_status():
     """Get aggregated status of all running bots"""
     # In a real app, we'd have a BotManager. 

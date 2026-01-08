@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 
 interface PanicSimulatorProps {
-    ticker: string;
     currentPrice: number;
     portfolioValue: number;
 }

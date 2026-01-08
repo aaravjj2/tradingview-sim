@@ -15,9 +15,12 @@ interface ForecastData {
     p50: number[];
     p75: number[];
     p90: number[];
-    trend_forecast: number[];
+    trend_forecast?: number[];  // Legacy
+    lstm_forecast?: number[];   // New v2
     garch_volatility: number[];
     event_dates: string[];
+    regime?: string;
+    weights?: Record<string, number>;
 }
 
 export default function UncertaintyCone({ ticker, currentPrice, days = 30 }: UncertaintyConeProps) {
@@ -56,12 +59,15 @@ export default function UncertaintyCone({ ticker, currentPrice, days = 30 }: Unc
         const chartWidth = width - padding.left - padding.right;
         const chartHeight = height - padding.top - padding.bottom;
 
-        // Find min/max across all bands
+        // Find min/max across all bands - with null safety
         const allValues = [
-            ...forecast.p10,
-            ...forecast.p90,
+            ...(forecast.p10 || []),
+            ...(forecast.p90 || []),
             currentPrice
-        ];
+        ].filter(v => typeof v === 'number' && !isNaN(v));
+
+        if (allValues.length === 0) return null;
+
         const minPrice = Math.min(...allValues) * 0.98;
         const maxPrice = Math.max(...allValues) * 1.02;
 
@@ -82,6 +88,9 @@ export default function UncertaintyCone({ ticker, currentPrice, days = 30 }: Unc
             return values.map((p, i) => `${i === 0 ? 'M' : 'L'}${xScale(i)},${yScale(p)}`).join(' ');
         };
 
+        // Trend line (support both old and new formats)
+        const trendData = forecast.lstm_forecast || forecast.trend_forecast || forecast.p50;
+
         return {
             width,
             height,
@@ -90,10 +99,10 @@ export default function UncertaintyCone({ ticker, currentPrice, days = 30 }: Unc
             maxPrice,
             xScale,
             yScale,
-            p90Band: createAreaPath(forecast.p90, forecast.p10),
-            p75Band: createAreaPath(forecast.p75, forecast.p25),
-            p50Line: createLinePath(forecast.p50),
-            trendLine: createLinePath(forecast.trend_forecast),
+            p90Band: createAreaPath(forecast.p90 || [], forecast.p10 || []),
+            p75Band: createAreaPath(forecast.p75 || [], forecast.p25 || []),
+            p50Line: createLinePath(forecast.p50 || []),
+            trendLine: trendData ? createLinePath(trendData) : '',
             currentPriceY: yScale(currentPrice)
         };
     }, [forecast, currentPrice]);
