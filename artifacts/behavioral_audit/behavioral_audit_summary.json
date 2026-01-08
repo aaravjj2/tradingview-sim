@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-01-08T00:12:55.552505",
+  "total_audits": 30,
+  "symbols": [
+    "SPY",
+    "GLD",
+    "TLT"
+  ],
+  "check_pass_rates": {
+    "lower_churn_than_random": 100.0,
+    "lower_dd_slope_than_buy_hold": 100.0,
+    "no_regime_thrashing": 100.0,
+    "reasonable_time_in_market": 0.0
+  },
+  "overall_pass_rate": 0.0,
+  "acceptance_criteria": {
+    "all_checks_pass_rate_target": 95.0,
+    "all_checks_pass_rate_met": false
+  }
+}
