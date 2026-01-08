@@ -1,0 +1,59 @@
+# VolGate Configuration
+
+# Model settings
+model:
+  path: null  # Path to model artifact (null = use placeholder)
+  version: "volgate-v1.0"
+  
+# Trading mode - PAPER ONLY
+trading:
+  mode: paper  # MUST be 'paper' - live trading is disabled
+  
+# T+1 Policy - Orders execute at next day's open
+scheduling:
+  execution_policy: "T+1"
+  execution_time: "OPEN"  # Execute at market open
+  decision_cutoff: "15:55"  # EST - 5 minutes before close
+  
+# Abstention settings
+abstention:
+  confidence_threshold: 0.40  # Abstain if confidence below this
+  volatility_threshold_high: 0.25  # Reduce exposure above this vol
+  volatility_threshold_low: 0.10   # Increase exposure below this vol
+  
+# Slippage model parameters
+slippage:
+  base_bps: 5  # Base slippage in basis points
+  volume_impact_factor: 0.1  # Additional bps per % of ADV
+  volatility_factor: 0.5  # Additional bps per % volatility
+  modeled_mean: 8  # Expected mean slippage in bps
+  modeled_std: 3   # Expected std dev of slippage
+  tolerance_sigma: 1.0  # Tolerance for reconciliation (mean ± n*sigma)
+  
+# Position size limits
+position_limits:
+  max_adv_fraction: 0.01  # Max 1% of 20-day ADV per trade
+  max_position_value: 100000  # Max position value in USD
+  max_daily_trades: 5  # Max trades per day
+  
+# Symbols to trade
+symbols:
+  default: "SPY"
+  allowed:
+    - "SPY"
+    - "QQQ"
+    - "IWM"
+    
+# Database settings
+database:
+  path: "trading_data.db"
+  
+# Logging
+logging:
+  level: "INFO"
+  audit_all_predictions: true
+  
+# Shadow/Replay settings
+replay:
+  output_dir: "./replay_output"
+  save_actions: true
