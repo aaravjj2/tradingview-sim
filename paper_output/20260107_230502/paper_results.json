@@ -1,0 +1,52 @@
+[
+  {
+    "date": "2026-01-07",
+    "signal": 1,
+    "exposure": 0.3,
+    "confidence": 0.5,
+    "trade_plan": true,
+    "status": "success",
+    "order_status": "created",
+    "client_order_id": "VG-20260108-7cc49c1888f2a0f7"
+  },
+  {
+    "date": "2026-01-08",
+    "signal": 1,
+    "exposure": 0.3,
+    "confidence": 0.5,
+    "trade_plan": true,
+    "status": "success",
+    "order_status": "created",
+    "client_order_id": "VG-20260109-44cee80db787b8f7"
+  },
+  {
+    "date": "2026-01-09",
+    "signal": 1,
+    "exposure": 0.3,
+    "confidence": 0.5,
+    "trade_plan": true,
+    "status": "success",
+    "order_status": "created",
+    "client_order_id": "VG-20260110-a351c194ae1effb1"
+  },
+  {
+    "date": "2026-01-12",
+    "signal": 1,
+    "exposure": 0.3,
+    "confidence": 0.5,
+    "trade_plan": true,
+    "status": "success",
+    "order_status": "created",
+    "client_order_id": "VG-20260113-2f35363699076f89"
+  },
+  {
+    "date": "2026-01-13",
+    "signal": 1,
+    "exposure": 0.3,
+    "confidence": 0.5,
+    "trade_plan": true,
+    "status": "success",
+    "order_status": "created",
+    "client_order_id": "VG-20260114-a893f81cab8b61e6"
+  }
+]
