@@ -1,2 +1,4 @@
 client_order_id,symbol,side,qty,expected_price,fill_price,slippage_bps,modeled_mean_bps,modeled_std_bps,within_tolerance,status,filled_at
+VG-20260114-f76e0b6ae1634057,SPY,buy,120000,589.0,589.52,8.82,8.0,3.0,YES,filled,2026-01-07T23:29:26.720935
 VG-20260115-0ee11bfba6e8737a,SPY,buy,120000,589.0,589.64,10.82,8.0,3.0,YES,filled,2026-01-07T23:04:47.335948
+VG-20260113-5afca189c6940ca3,SPY,buy,120000,589.0,589.45,7.7,8.0,3.0,YES,filled,2026-01-07T23:29:26.650797

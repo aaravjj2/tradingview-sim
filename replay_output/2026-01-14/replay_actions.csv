@@ -1,0 +1,6 @@
+bars_count,client_order_id,confidence,expected_execution,exposure,fill_price,reason,signal,slippage_bps,snapshot_hash,status,step,symbol,target_shares,timestamp,trade_plan_id
+5,,,,,,,,,313282780689afdc3df6a9aa55ce80ca728474fdf926723e189cc1475e4d9db6,,snapshot_created,SPY,,2026-01-14T15:55:00,
+,,0.5,,0.3,,Medium volatility regime (composite_vol=0.132),1,,,,signal_generated,,,2026-01-14T15:55:00,
+,,,OPEN_T+1,,,,,,,,trade_plan_created,,120000,,4b2cb6e4c6d1cfb1
+,VG-20260114-f76e0b6ae1634057,,,,,,,,,created,order_placed,,,,
+,VG-20260114-f76e0b6ae1634057,,,,589.52,,,8.82,,,order_filled,,,,
